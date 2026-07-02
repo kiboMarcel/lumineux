@@ -1,0 +1,1 @@
+je voudrais maintenant implement l'ajout d'un nouveau membre

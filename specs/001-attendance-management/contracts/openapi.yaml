@@ -1,0 +1,382 @@
+openapi: 3.0.3
+info:
+  title: Lumineux — API Gestion de la présence
+  version: "1.0.0"
+  description: >
+    Contrat REST de la fonctionnalité de gestion de la présence aux réunions.
+    Endpoints sous /api/v1. Authentification JWT Bearer. Les opérations de gestion
+    exigent le droit `manage_attendance` (bureau) ; le scan exige un membre authentifié.
+    Erreurs au format RFC 7807 (application/problem+json). Heures en UTC (ISO 8601).
+servers:
+  - url: /api/v1
+security:
+  - bearerAuth: []
+tags:
+  - name: Sessions
+    description: Cycle de vie des sessions de présence
+  - name: Presences
+    description: Enregistrement et consultation des présences
+
+paths:
+  /attendance-sessions:
+    post:
+      tags: [Sessions]
+      summary: Démarrer une session de présence (bureau)
+      description: Crée une session Open pour une antenne à une date/heure. Requiert `manage_attendance`. (FR-001, FR-002, FR-003)
+      operationId: startSession
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/StartSessionRequest' }
+      responses:
+        '201':
+          description: Session créée
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SessionResponse' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409':
+          description: Une session ouverte existe déjà pour cette antenne/créneau (FR-003)
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+
+  /attendance-sessions/{sessionId}:
+    get:
+      tags: [Sessions]
+      summary: Consulter une session
+      operationId: getSession
+      parameters: [{ $ref: '#/components/parameters/SessionId' }]
+      responses:
+        '200':
+          description: Détails de la session
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SessionResponse' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /attendance-sessions/{sessionId}/close:
+    post:
+      tags: [Sessions]
+      summary: Clôturer une session (bureau)
+      description: Fixe l'heure de fin et la propage à toutes les présences valides. Requiert `manage_attendance`. (FR-005, FR-006, FR-007)
+      operationId: closeSession
+      parameters: [{ $ref: '#/components/parameters/SessionId' }]
+      responses:
+        '200':
+          description: Session clôturée
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SessionResponse' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          description: La session est déjà clôturée
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+
+  /attendance-sessions/{sessionId}/qr:
+    get:
+      tags: [Sessions]
+      summary: Récupérer le jeton QR courant à afficher (bureau)
+      description: Renvoie le jeton QR rotatif de la fenêtre courante et sa durée de validité. Requiert `manage_attendance`. Le secret de session n'est jamais renvoyé. (FR-013)
+      operationId: getCurrentQrToken
+      parameters: [{ $ref: '#/components/parameters/SessionId' }]
+      responses:
+        '200':
+          description: Jeton QR courant
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/QrTokenResponse' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          description: La session est clôturée (plus de QR)
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+
+  /attendance-sessions/{sessionId}/scan:
+    post:
+      tags: [Presences]
+      summary: Enregistrer sa présence par scan (membre)
+      description: Le membre authentifié soumet le jeton QR scanné. Idempotent. (FR-008, FR-009, FR-010, FR-011, FR-012, FR-013a)
+      operationId: scanAttendance
+      parameters: [{ $ref: '#/components/parameters/SessionId' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ScanRequest' }
+      responses:
+        '201':
+          description: Présence enregistrée
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AttendanceResponse' }
+        '200':
+          description: Déjà présent — aucune modification (anti-doublon, heure d'arrivée initiale conservée)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AttendanceResponse' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '409':
+          description: Session clôturée
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+        '410':
+          description: Jeton QR expiré ou invalide — scanner le code courant (FR-013a)
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+
+  /attendance-sessions/{sessionId}/scan/batch:
+    post:
+      tags: [Presences]
+      summary: Synchroniser un lot de scans hors ligne (membre)
+      description: Envoie les scans mis en file hors ligne avec leur heure réelle d'arrivée. Idempotent via clientOperationId. (FR-023, FR-023a, FR-023b)
+      operationId: syncOfflineScans
+      parameters: [{ $ref: '#/components/parameters/SessionId' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/OfflineScanBatchRequest' }
+      responses:
+        '200':
+          description: Résultat de synchronisation par élément
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/OfflineScanBatchResponse' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /attendance-sessions/{sessionId}/attendances:
+    get:
+      tags: [Presences]
+      summary: Lister les présences d'une session (bureau)
+      description: Liste en direct (pendant la session) et après clôture. Requiert `manage_attendance`. (FR-021, FR-022)
+      operationId: listAttendances
+      parameters:
+        - { $ref: '#/components/parameters/SessionId' }
+        - name: status
+          in: query
+          required: false
+          schema: { type: string, enum: [Valid, Cancelled, All], default: Valid }
+      responses:
+        '200':
+          description: Liste des présences + décompte
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AttendanceListResponse' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    post:
+      tags: [Presences]
+      summary: Ajouter manuellement une présence (bureau)
+      description: Marque présent un membre existant sans application mobile. Requiert `manage_attendance`. (FR-014, FR-015, FR-017)
+      operationId: addManualAttendance
+      parameters: [{ $ref: '#/components/parameters/SessionId' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ManualAttendanceRequest' }
+      responses:
+        '201':
+          description: Présence ajoutée
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AttendanceResponse' }
+        '200':
+          description: Membre déjà présent — aucun doublon créé
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AttendanceResponse' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404':
+          description: Session ou membre introuvable (FR-017)
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+        '409':
+          description: Session clôturée
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+
+  /attendance-sessions/{sessionId}/attendances/{memberId}:
+    delete:
+      tags: [Presences]
+      summary: Retirer/annuler une présence (bureau)
+      description: Annule une présence enregistrée par erreur tant que la session est Open. Trace conservée. Requiert `manage_attendance`. (FR-016)
+      operationId: cancelAttendance
+      parameters:
+        - { $ref: '#/components/parameters/SessionId' }
+        - name: memberId
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '204': { description: Présence annulée }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          description: Session clôturée — annulation impossible
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    SessionId:
+      name: sessionId
+      in: path
+      required: true
+      schema: { type: integer }
+
+  responses:
+    ValidationError:
+      description: Requête invalide
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/ProblemDetails' }
+    Unauthorized:
+      description: Authentification requise ou invalide
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/ProblemDetails' }
+    Forbidden:
+      description: Droit manquant (manage_attendance)
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/ProblemDetails' }
+    NotFound:
+      description: Ressource introuvable
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/ProblemDetails' }
+
+  schemas:
+    StartSessionRequest:
+      type: object
+      required: [antennaId, meetingDate]
+      properties:
+        antennaId: { type: integer, description: Antenne où se tient la réunion }
+        meetingDate: { type: string, format: date-time, description: Date/heure planifiée de la réunion }
+        qrStepSeconds: { type: integer, default: 30, minimum: 10, maximum: 120, description: Pas de rotation du jeton QR }
+
+    SessionResponse:
+      type: object
+      properties:
+        id: { type: integer }
+        antennaId: { type: integer }
+        meetingDate: { type: string, format: date-time }
+        startTime: { type: string, format: date-time }
+        endTime: { type: string, format: date-time, nullable: true }
+        status: { type: string, enum: [Open, Closed] }
+        openedByMemberId: { type: integer }
+        closedByMemberId: { type: integer, nullable: true }
+        attendanceCount: { type: integer, description: Nombre de présences valides }
+      # Note : qrSecret n'est JAMAIS exposé (Constitution IV).
+
+    QrTokenResponse:
+      type: object
+      properties:
+        token: { type: string, description: Jeton à encoder dans le QR pour la fenêtre courante }
+        stepSeconds: { type: integer }
+        expiresAt: { type: string, format: date-time, description: Fin de validité de la fenêtre courante }
+
+    ScanRequest:
+      type: object
+      required: [token]
+      properties:
+        token: { type: string, description: Jeton QR scanné par le membre }
+
+    ManualAttendanceRequest:
+      type: object
+      required: [memberId]
+      properties:
+        memberId: { type: integer }
+        arrivalTime: { type: string, format: date-time, nullable: true, description: Heure d'arrivée ; défaut = heure serveur à l'ajout }
+
+    OfflineScanBatchRequest:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          minItems: 1
+          items:
+            type: object
+            required: [clientOperationId, token, clientArrivalTime]
+            properties:
+              clientOperationId: { type: string, maxLength: 64, description: GUID d'idempotence côté client }
+              token: { type: string, description: Jeton QR capturé lors du scan hors ligne }
+              clientArrivalTime: { type: string, format: date-time, description: Heure réelle d'arrivée (client), bornée par le serveur }
+
+    OfflineScanBatchResponse:
+      type: object
+      properties:
+        results:
+          type: array
+          items:
+            type: object
+            properties:
+              clientOperationId: { type: string }
+              outcome: { type: string, enum: [Created, AlreadyPresent, Rejected] }
+              reason: { type: string, nullable: true, description: Motif si Rejected (ex. jeton invalide, arrivée postérieure à la clôture) }
+              attendanceId: { type: integer, nullable: true }
+
+    AttendanceResponse:
+      type: object
+      properties:
+        id: { type: integer }
+        sessionId: { type: integer }
+        memberId: { type: integer }
+        memberFullName: { type: string }
+        arrivalTime: { type: string, format: date-time }
+        endTime: { type: string, format: date-time, nullable: true }
+        source: { type: string, enum: [QrScan, Manual] }
+        status: { type: string, enum: [Valid, Cancelled] }
+        originAntennaId: { type: integer, nullable: true }
+
+    AttendanceListResponse:
+      type: object
+      properties:
+        sessionId: { type: integer }
+        validCount: { type: integer }
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/AttendanceResponse' }
+
+    ProblemDetails:
+      type: object
+      description: Erreur au format RFC 7807
+      properties:
+        type: { type: string }
+        title: { type: string }
+        status: { type: integer }
+        detail: { type: string }
+        instance: { type: string }

@@ -1,0 +1,14 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Lumineux.Api/Lumineux.Api.csproj" />
+    <Project Path="src/Lumineux.Application/Lumineux.Application.csproj" />
+    <Project Path="src/Lumineux.Domain/Lumineux.Domain.csproj" />
+    <Project Path="src/Lumineux.Infrastructure/Lumineux.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Lumineux.Api.Tests/Lumineux.Api.Tests.csproj" />
+    <Project Path="tests/Lumineux.Application.Tests/Lumineux.Application.Tests.csproj" />
+    <Project Path="tests/Lumineux.Domain.Tests/Lumineux.Domain.Tests.csproj" />
+    <Project Path="tests/Lumineux.Infrastructure.Tests/Lumineux.Infrastructure.Tests.csproj" />
+  </Folder>
+</Solution>
