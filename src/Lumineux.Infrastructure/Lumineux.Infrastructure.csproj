@@ -11,6 +11,7 @@
     </PackageReference>
     <PackageReference Include="System.IdentityModel.Tokens.Jwt" />
     <PackageReference Include="Microsoft.IdentityModel.Tokens" />
+    <PackageReference Include="Microsoft.Extensions.Identity.Core" />
     <!-- Force une version non vulnérable du paquet transitif (revue de sécurité T072) -->
     <PackageReference Include="System.Security.Cryptography.Xml" />
     <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" />

@@ -80,6 +80,9 @@ public sealed class ApiTestFixture : WebApplicationFactory<Program>
             {
                 member = new Member
                 {
+                    Reference = "M-FIXTURE-0001",
+                    EntryDate = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc),
+                    Gender = "F",
                     LastName = "Doe",
                     FirstName = "Jane",
                     Status = "Active",
@@ -95,6 +98,10 @@ public sealed class ApiTestFixture : WebApplicationFactory<Program>
 
     public string IssueBureauToken() =>
         Issue(memberId: 42, "bureau", Lumineux.Application.Abstractions.Permissions.ManageAttendance);
+
+    /// <summary>Jeton d'un membre du bureau disposant du droit de gestion des membres (feature 002).</summary>
+    public string IssueMembersManagerToken() =>
+        Issue(memberId: 43, "bureau-membres", Lumineux.Application.Abstractions.Permissions.ManageMembers);
 
     public string IssueMemberToken()
     {

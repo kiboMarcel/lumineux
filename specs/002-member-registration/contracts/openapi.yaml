@@ -1,0 +1,289 @@
+openapi: 3.0.3
+info:
+  title: Lumineux — API Gestion des membres
+  version: "1.0.0"
+  description: >
+    Contrat REST de la fonctionnalité d'ajout d'un nouveau membre. Endpoints sous /api/v1.
+    Authentification JWT Bearer. Les opérations exigent le droit `manage_members` (bureau).
+    Erreurs au format RFC 7807 (application/problem+json). Heures en UTC (ISO 8601).
+    Le mot de passe temporaire n'est renvoyé qu'en cas de repli « remise-bureau », une seule fois.
+servers:
+  - url: /api/v1
+security:
+  - bearerAuth: []
+tags:
+  - name: Members
+    description: Création, consultation et correction des membres
+
+paths:
+  /members:
+    post:
+      tags: [Members]
+      summary: Créer un nouveau membre (bureau)
+      description: >
+        Crée un membre + provisionne son compte (atomique). Requiert `manage_members`.
+        En cas d'homonyme, `confirmDuplicate=true` est requis pour poursuivre (FR-007).
+        Refus si une coordonnée est déjà utilisée par un membre actif (FR-008).
+      operationId: createMember
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateMemberRequest' }
+      responses:
+        '201':
+          description: Membre créé (et compte provisionné)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MemberCreatedResponse' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404':
+          description: Référence liée inconnue (antenne, nationalité, civilité, ville, district, introducteur)
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+        '409':
+          description: >
+            Conflit : homonyme non confirmé (code `duplicate_name`) ou coordonnée déjà utilisée
+            par un membre actif (code `contact_in_use`).
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/DuplicateProblemDetails' }
+    get:
+      tags: [Members]
+      summary: Rechercher / lister les membres (bureau)
+      description: Recherche par nom, prénom ou référence (FR-013). Requiert `manage_members`.
+      operationId: searchMembers
+      parameters:
+        - name: query
+          in: query
+          required: false
+          schema: { type: string }
+          description: Terme de recherche (nom, prénom ou référence)
+        - name: page
+          in: query
+          required: false
+          schema: { type: integer, default: 1, minimum: 1 }
+        - name: pageSize
+          in: query
+          required: false
+          schema: { type: integer, default: 20, minimum: 1, maximum: 100 }
+      responses:
+        '200':
+          description: Résultats paginés
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MemberListResponse' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /members/{memberId}:
+    get:
+      tags: [Members]
+      summary: Consulter la fiche d'un membre (bureau)
+      operationId: getMember
+      parameters: [{ $ref: '#/components/parameters/MemberId' }]
+      responses:
+        '200':
+          description: Fiche du membre
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MemberResponse' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    put:
+      tags: [Members]
+      summary: Corriger les informations d'un membre (bureau)
+      description: Met à jour les champs autorisés (FR-014). Requiert `manage_members`. Trace la modification.
+      operationId: updateMember
+      parameters: [{ $ref: '#/components/parameters/MemberId' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UpdateMemberRequest' }
+      responses:
+        '200':
+          description: Membre mis à jour
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MemberResponse' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          description: Coordonnée déjà utilisée par un autre membre actif
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    MemberId:
+      name: memberId
+      in: path
+      required: true
+      schema: { type: integer }
+
+  responses:
+    ValidationError:
+      description: Requête invalide (champs obligatoires manquants ou format incorrect)
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/ProblemDetails' }
+    Unauthorized:
+      description: Authentification requise ou invalide
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/ProblemDetails' }
+    Forbidden:
+      description: Droit manquant (manage_members)
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/ProblemDetails' }
+    NotFound:
+      description: Ressource introuvable
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/ProblemDetails' }
+
+  schemas:
+    CreateMemberRequest:
+      type: object
+      required: [lastName, firstName, gender, antennaId]
+      properties:
+        lastName: { type: string, maxLength: 200 }
+        firstName: { type: string, maxLength: 200 }
+        gender: { type: string, enum: [M, F] }
+        mobile: { type: string, nullable: true, description: Mobile (mobile OU email requis) }
+        email: { type: string, format: email, nullable: true, description: E-mail (mobile OU email requis) }
+        antennaId: { type: integer, description: Antenne d'origine }
+        civilityId: { type: integer, nullable: true }
+        birthDate: { type: string, format: date, nullable: true }
+        birthPlaceId: { type: integer, nullable: true }
+        birthCityId: { type: integer, nullable: true }
+        address: { type: string, nullable: true }
+        districtId: { type: integer, nullable: true }
+        nationalityId: { type: integer, nullable: true }
+        introducerId: { type: integer, nullable: true }
+        confirmDuplicate:
+          type: boolean
+          default: false
+          description: Confirme la création malgré un homonyme détecté (FR-007)
+
+    UpdateMemberRequest:
+      type: object
+      description: Champs corrigeables par le bureau (la référence n'est pas modifiable)
+      properties:
+        lastName: { type: string, maxLength: 200 }
+        firstName: { type: string, maxLength: 200 }
+        gender: { type: string, enum: [M, F] }
+        mobile: { type: string, nullable: true }
+        email: { type: string, format: email, nullable: true }
+        antennaId: { type: integer }
+        civilityId: { type: integer, nullable: true }
+        birthDate: { type: string, format: date, nullable: true }
+        birthPlaceId: { type: integer, nullable: true }
+        birthCityId: { type: integer, nullable: true }
+        address: { type: string, nullable: true }
+        districtId: { type: integer, nullable: true }
+        nationalityId: { type: integer, nullable: true }
+        introducerId: { type: integer, nullable: true }
+
+    MemberResponse:
+      type: object
+      properties:
+        id: { type: integer }
+        reference: { type: string }
+        entryDate: { type: string, format: date-time }
+        lastName: { type: string }
+        firstName: { type: string }
+        gender: { type: string, enum: [M, F] }
+        mobile: { type: string, nullable: true }
+        email: { type: string, nullable: true }
+        antennaId: { type: integer, nullable: true }
+        civilityId: { type: integer, nullable: true }
+        birthDate: { type: string, format: date, nullable: true }
+        birthPlaceId: { type: integer, nullable: true }
+        birthCityId: { type: integer, nullable: true }
+        address: { type: string, nullable: true }
+        districtId: { type: integer, nullable: true }
+        nationalityId: { type: integer, nullable: true }
+        introducerId: { type: integer, nullable: true }
+        status: { type: string, enum: [Active, Archived] }
+        accountActivationState: { type: string, enum: [PendingActivation, Active] }
+      # Note : passwordHash / mot de passe ne sont JAMAIS exposés ici (Constitution IV).
+
+    MemberCreatedResponse:
+      type: object
+      description: >
+        Réponse de création. `credentialsDelivery` indique comment les identifiants ont été transmis.
+        `temporaryPassword` n'est présent QUE si `credentialsDelivery = BureauHandout` (repli), une
+        seule fois, pour remise par le bureau.
+      properties:
+        member: { $ref: '#/components/schemas/MemberResponse' }
+        loginId: { type: string, description: Identifiant de connexion (= référence) }
+        credentialsDelivery:
+          type: string
+          enum: [EmailSent, BureauHandout]
+          description: EmailSent = invitation e-mail envoyée ; BureauHandout = à remettre par le bureau
+        temporaryPassword:
+          type: string
+          nullable: true
+          description: Mot de passe temporaire, présent uniquement si credentialsDelivery = BureauHandout
+
+    MemberListItem:
+      type: object
+      properties:
+        id: { type: integer }
+        reference: { type: string }
+        lastName: { type: string }
+        firstName: { type: string }
+        mobile: { type: string, nullable: true }
+        email: { type: string, nullable: true }
+        antennaId: { type: integer, nullable: true }
+        status: { type: string, enum: [Active, Archived] }
+
+    MemberListResponse:
+      type: object
+      properties:
+        page: { type: integer }
+        pageSize: { type: integer }
+        total: { type: integer }
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/MemberListItem' }
+
+    ProblemDetails:
+      type: object
+      description: Erreur au format RFC 7807
+      properties:
+        type: { type: string }
+        title: { type: string }
+        status: { type: integer }
+        detail: { type: string }
+        instance: { type: string }
+
+    DuplicateProblemDetails:
+      allOf:
+        - $ref: '#/components/schemas/ProblemDetails'
+        - type: object
+          properties:
+            code:
+              type: string
+              enum: [duplicate_name, contact_in_use]
+              description: duplicate_name = homonyme à confirmer ; contact_in_use = coordonnée déjà utilisée
+            duplicateMemberIds:
+              type: array
+              items: { type: integer }
+              description: Membres existants correspondants (aide à la décision du bureau)

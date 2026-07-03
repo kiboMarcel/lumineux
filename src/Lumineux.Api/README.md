@@ -49,7 +49,17 @@ dotnet ef migrations add <Nom> --project src/Lumineux.Infrastructure --startup-p
 ```
 
 Migrations existantes : `InitialAttendance` (antennes, membres + FK antenne d'origine, sessions),
-`AddAttendances` (présences + index uniques filtrés).
+`AddAttendances` (présences + index uniques filtrés), `MemberRegistration` (enrichissement `members`,
+`member_accounts`, nomenclatures civilités/pays/villes/districts, index uniques filtrés contacts).
+Voir aussi [MIGRATION_NOTES](../../specs/002-member-registration/MIGRATION_NOTES.md) (backfill `reference`).
+
+## Configuration e-mail (feature 002)
+
+Section `Email` : `Provider` = `Logging` (dev, journalise sans mot de passe) ou `Smtp` (prod).
+Les paramètres SMTP (`Email:Smtp:Host/Port/User/Password`) et `MemberReference:Format` sont fournis
+par configuration/secrets. Le mot de passe temporaire d'un nouveau membre n'est jamais journalisé ;
+en l'absence d'e-mail (ou en cas d'échec d'envoi), il est renvoyé une seule fois dans la réponse de
+création pour remise par le bureau.
 
 ## Exécution
 
@@ -60,7 +70,7 @@ dotnet run --project src/Lumineux.Api   # Swagger sur /swagger en développement
 ## Tests
 
 ```bash
-dotnet test                             # 66 tests (unitaires Domain/Application + intégration Infra/API)
+dotnet test                             # 104 tests (unitaires Domain/Application + intégration Infra/API)
 ```
 
 ## Principaux endpoints (`/api/v1`)
@@ -76,8 +86,13 @@ dotnet test                             # 66 tests (unitaires Domain/Application
 | POST | `/attendance-sessions/{id}/attendances` | `manage_attendance` | Ajout manuel |
 | GET | `/attendance-sessions/{id}/attendances` | `manage_attendance` | Lister les présences |
 | DELETE | `/attendance-sessions/{id}/attendances/{memberId}` | `manage_attendance` | Retirer une présence |
+| POST | `/members` | `manage_members` | Créer un membre + provisionner le compte |
+| GET | `/members` | `manage_members` | Rechercher / lister les membres |
+| GET | `/members/{id}` | `manage_members` | Consulter une fiche membre |
+| PUT | `/members/{id}` | `manage_members` | Corriger une fiche membre |
 
-Contrat de référence : [`contracts/openapi.yaml`](../../specs/001-attendance-management/contracts/openapi.yaml).
+Contrats de référence : [présence](../../specs/001-attendance-management/contracts/openapi.yaml),
+[membres](../../specs/002-member-registration/contracts/openapi.yaml).
 
 ## Sécurité
 

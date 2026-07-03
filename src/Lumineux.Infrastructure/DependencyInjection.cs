@@ -1,6 +1,7 @@
 using Lumineux.Application.Abstractions;
 using Lumineux.Domain.Abstractions;
 using Lumineux.Infrastructure.BackgroundJobs;
+using Lumineux.Infrastructure.Email;
 using Lumineux.Infrastructure.Observability;
 using Lumineux.Infrastructure.Persistence;
 using Lumineux.Infrastructure.Persistence.Interceptors;
@@ -32,6 +33,25 @@ public static class DependencyInjection
         services.AddScoped<IAntennaReadRepository, AntennaReadRepository>();
         services.AddScoped<IAttendanceRepository, AttendanceRepository>();
         services.AddScoped<IMemberReadRepository, MemberReadRepository>();
+
+        // Feature 002 — gestion des membres
+        services.Configure<MemberReferenceOptions>(configuration.GetSection(MemberReferenceOptions.SectionName));
+        services.Configure<EmailOptions>(configuration.GetSection(EmailOptions.SectionName));
+        services.AddScoped<IMemberRepository, MemberRepository>();
+        services.AddScoped<IMemberAccountRepository, MemberAccountRepository>();
+        services.AddScoped<IReferenceLookupRepository, ReferenceLookupRepository>();
+        services.AddScoped<IMemberReferenceGenerator, MemberReferenceGenerator>();
+        services.AddSingleton<IPasswordHasher, IdentityPasswordHasher>();
+
+        var emailProvider = configuration.GetSection($"{EmailOptions.SectionName}:Provider").Value ?? "Logging";
+        if (string.Equals(emailProvider, "Smtp", StringComparison.OrdinalIgnoreCase))
+        {
+            services.AddScoped<IEmailSender, SmtpEmailSender>();
+        }
+        else
+        {
+            services.AddScoped<IEmailSender, LoggingEmailSender>();
+        }
 
         services.AddDbContext<AppDbContext>((sp, options) =>
         {

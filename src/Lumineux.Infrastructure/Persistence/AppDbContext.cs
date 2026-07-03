@@ -17,6 +17,16 @@ public class AppDbContext : DbContext
 
     public DbSet<Attendance> Attendances => Set<Attendance>();
 
+    public DbSet<MemberAccount> MemberAccounts => Set<MemberAccount>();
+
+    public DbSet<Civility> Civilities => Set<Civility>();
+
+    public DbSet<Country> Countries => Set<Country>();
+
+    public DbSet<City> Cities => Set<City>();
+
+    public DbSet<District> Districts => Set<District>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);

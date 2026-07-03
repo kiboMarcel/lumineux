@@ -51,8 +51,12 @@ builder.Services
     });
 
 builder.Services.AddAuthorization(options =>
+{
     options.AddPolicy(Permissions.ManageAttendance, policy =>
-        policy.RequireClaim("permission", Permissions.ManageAttendance)));
+        policy.RequireClaim("permission", Permissions.ManageAttendance));
+    options.AddPolicy(Permissions.ManageMembers, policy =>
+        policy.RequireClaim("permission", Permissions.ManageMembers));
+});
 
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();

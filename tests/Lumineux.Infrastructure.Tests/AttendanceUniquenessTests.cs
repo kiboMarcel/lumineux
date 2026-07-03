@@ -50,7 +50,16 @@ public sealed class AttendanceUniquenessTests : IDisposable
         _db.Antennas.Add(antenna);
         await _db.SaveChangesAsync();
 
-        var member = new Member { LastName = "Doe", FirstName = "Jane", Status = "Active", AntennaId = antenna.Id };
+        var member = new Member
+        {
+            Reference = "M-UNIQ-0001",
+            EntryDate = Now,
+            Gender = "F",
+            LastName = "Doe",
+            FirstName = "Jane",
+            Status = "Active",
+            AntennaId = antenna.Id,
+        };
         _db.Members.Add(member);
         await _db.SaveChangesAsync();
 

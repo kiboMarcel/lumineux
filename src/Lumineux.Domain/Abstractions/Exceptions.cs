@@ -29,3 +29,21 @@ public sealed class GoneException : DomainException
 {
     public GoneException(string message) : base(message) { }
 }
+
+/// <summary>
+/// Conflit de doublon membre (→ 409) : homonyme non confirmé (<c>duplicate_name</c>) ou
+/// coordonnée déjà utilisée par un membre actif (<c>contact_in_use</c>).
+/// </summary>
+public sealed class DuplicateMemberException : DomainException
+{
+    public DuplicateMemberException(string message, string code, IReadOnlyList<int> duplicateMemberIds)
+        : base(message)
+    {
+        Code = code;
+        DuplicateMemberIds = duplicateMemberIds;
+    }
+
+    public string Code { get; }
+
+    public IReadOnlyList<int> DuplicateMemberIds { get; }
+}

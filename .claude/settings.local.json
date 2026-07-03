@@ -10,7 +10,10 @@
       "PowerShell(& \".specify/scripts/powershell/check-prerequisites.ps1\" -Json -RequireTasks -IncludeTasks)",
       "PowerShell(dotnet restore *)",
       "PowerShell(dotnet test *)",
-      "PowerShell(dotnet ef migrations *)"
+      "PowerShell(dotnet ef migrations *)",
+      "Bash(git config *)",
+      "PowerShell(& \".specify/scripts/powershell/check-prerequisites.ps1\" -Json -PathsOnly)",
+      "PowerShell(& \".specify/scripts/powershell/check-prerequisites.ps1\" -Json -RequireTasks -IncludeTasks 2>&1)"
     ]
   }
 }

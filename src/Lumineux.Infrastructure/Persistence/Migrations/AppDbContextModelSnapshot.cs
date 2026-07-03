@@ -230,7 +230,7 @@ namespace Lumineux.Infrastructure.Persistence.Migrations
                     b.ToTable("attendance_sessions", (string)null);
                 });
 
-            modelBuilder.Entity("Lumineux.Domain.Entities.Member", b =>
+            modelBuilder.Entity("Lumineux.Domain.Entities.City", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -238,9 +238,11 @@ namespace Lumineux.Infrastructure.Persistence.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<int?>("AntennaId")
-                        .HasColumnType("int")
-                        .HasColumnName("antenna");
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("nvarchar(10)")
+                        .HasColumnName("code");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2")
@@ -251,17 +253,276 @@ namespace Lumineux.Infrastructure.Persistence.Migrations
                         .HasColumnType("nvarchar(255)")
                         .HasColumnName("createdby");
 
+                    b.Property<string>("Label")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)")
+                        .HasColumnName("label");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)")
+                        .HasColumnName("status");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("updatedt");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)")
+                        .HasColumnName("updatedby");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("cities", (string)null);
+                });
+
+            modelBuilder.Entity("Lumineux.Domain.Entities.Civility", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(60)
+                        .HasColumnType("nvarchar(60)")
+                        .HasColumnName("code");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("createdt");
+
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)")
+                        .HasColumnName("createdby");
+
+                    b.Property<string>("Label")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)")
+                        .HasColumnName("label");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)")
+                        .HasColumnName("status");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("updatedt");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)")
+                        .HasColumnName("updatedby");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("civilities", (string)null);
+                });
+
+            modelBuilder.Entity("Lumineux.Domain.Entities.Country", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("nvarchar(10)")
+                        .HasColumnName("code");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("createdt");
+
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)")
+                        .HasColumnName("createdby");
+
+                    b.Property<string>("LabelCountry")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)")
+                        .HasColumnName("label_country");
+
+                    b.Property<string>("LabelNationality")
+                        .IsRequired()
+                        .HasMaxLength(210)
+                        .HasColumnType("nvarchar(210)")
+                        .HasColumnName("label_nationality");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)")
+                        .HasColumnName("status");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("updatedt");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)")
+                        .HasColumnName("updatedby");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("countries", (string)null);
+                });
+
+            modelBuilder.Entity("Lumineux.Domain.Entities.District", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("nvarchar(10)")
+                        .HasColumnName("code");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("createdt");
+
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)")
+                        .HasColumnName("createdby");
+
+                    b.Property<string>("Label")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)")
+                        .HasColumnName("label");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)")
+                        .HasColumnName("status");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("updatedt");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)")
+                        .HasColumnName("updatedby");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("districts", (string)null);
+                });
+
+            modelBuilder.Entity("Lumineux.Domain.Entities.Member", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Address")
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)")
+                        .HasColumnName("address");
+
+                    b.Property<int?>("AntennaId")
+                        .HasColumnType("int")
+                        .HasColumnName("antenna");
+
+                    b.Property<int?>("BirthCityId")
+                        .HasColumnType("int")
+                        .HasColumnName("birth_city");
+
+                    b.Property<DateTime?>("BirthDate")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("birth_date");
+
+                    b.Property<int?>("BirthPlaceId")
+                        .HasColumnType("int")
+                        .HasColumnName("birth_place");
+
+                    b.Property<int?>("CivilityId")
+                        .HasColumnType("int")
+                        .HasColumnName("civility");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("createdt");
+
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)")
+                        .HasColumnName("createdby");
+
+                    b.Property<int?>("DistrictId")
+                        .HasColumnType("int")
+                        .HasColumnName("district");
+
+                    b.Property<string>("Email")
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)")
+                        .HasColumnName("email");
+
+                    b.Property<DateTime>("EntryDate")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("entry_date");
+
                     b.Property<string>("FirstName")
                         .IsRequired()
                         .HasMaxLength(200)
                         .HasColumnType("nvarchar(200)")
                         .HasColumnName("first_name");
 
+                    b.Property<string>("Gender")
+                        .IsRequired()
+                        .HasMaxLength(6)
+                        .HasColumnType("nvarchar(6)")
+                        .HasColumnName("gender");
+
+                    b.Property<int?>("IntroducerId")
+                        .HasColumnType("int")
+                        .HasColumnName("introducer");
+
                     b.Property<string>("LastName")
                         .IsRequired()
                         .HasMaxLength(200)
                         .HasColumnType("nvarchar(200)")
                         .HasColumnName("last_name");
+
+                    b.Property<string>("Mobile")
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)")
+                        .HasColumnName("mobile");
+
+                    b.Property<int?>("NationalityId")
+                        .HasColumnType("int")
+                        .HasColumnName("nationality");
+
+                    b.Property<string>("Reference")
+                        .IsRequired()
+                        .HasMaxLength(60)
+                        .HasColumnType("nvarchar(60)")
+                        .HasColumnName("reference");
 
                     b.Property<string>("Status")
                         .IsRequired()
@@ -282,7 +543,97 @@ namespace Lumineux.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("AntennaId");
 
+                    b.HasIndex("BirthCityId");
+
+                    b.HasIndex("BirthPlaceId");
+
+                    b.HasIndex("CivilityId");
+
+                    b.HasIndex("DistrictId");
+
+                    b.HasIndex("Email")
+                        .IsUnique()
+                        .HasFilter("email IS NOT NULL AND status = 'Active'");
+
+                    b.HasIndex("FirstName");
+
+                    b.HasIndex("IntroducerId");
+
+                    b.HasIndex("LastName");
+
+                    b.HasIndex("Mobile")
+                        .IsUnique()
+                        .HasFilter("mobile IS NOT NULL AND status = 'Active'");
+
+                    b.HasIndex("NationalityId");
+
+                    b.HasIndex("Reference")
+                        .IsUnique();
+
                     b.ToTable("members", (string)null);
+                });
+
+            modelBuilder.Entity("Lumineux.Domain.Entities.MemberAccount", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("ActivationState")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)")
+                        .HasColumnName("activation_state");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("createdt");
+
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)")
+                        .HasColumnName("createdby");
+
+                    b.Property<string>("LoginId")
+                        .IsRequired()
+                        .HasMaxLength(60)
+                        .HasColumnType("nvarchar(60)")
+                        .HasColumnName("login_id");
+
+                    b.Property<int>("MemberId")
+                        .HasColumnType("int")
+                        .HasColumnName("member");
+
+                    b.Property<bool>("MustChangePassword")
+                        .HasColumnType("bit")
+                        .HasColumnName("must_change_password");
+
+                    b.Property<string>("PasswordHash")
+                        .IsRequired()
+                        .HasMaxLength(512)
+                        .HasColumnType("nvarchar(512)")
+                        .HasColumnName("password_hash");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("updatedt");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)")
+                        .HasColumnName("updatedby");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("LoginId")
+                        .IsUnique();
+
+                    b.HasIndex("MemberId")
+                        .IsUnique();
+
+                    b.ToTable("member_accounts", (string)null);
                 });
 
             modelBuilder.Entity("Lumineux.Domain.Entities.Attendance", b =>
@@ -320,6 +671,47 @@ namespace Lumineux.Infrastructure.Persistence.Migrations
                         .WithMany()
                         .HasForeignKey("AntennaId")
                         .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("Lumineux.Domain.Entities.City", null)
+                        .WithMany()
+                        .HasForeignKey("BirthCityId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("Lumineux.Domain.Entities.City", null)
+                        .WithMany()
+                        .HasForeignKey("BirthPlaceId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("Lumineux.Domain.Entities.Civility", null)
+                        .WithMany()
+                        .HasForeignKey("CivilityId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("Lumineux.Domain.Entities.District", null)
+                        .WithMany()
+                        .HasForeignKey("DistrictId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("Lumineux.Domain.Entities.Member", null)
+                        .WithMany()
+                        .HasForeignKey("IntroducerId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("Lumineux.Domain.Entities.Country", null)
+                        .WithMany()
+                        .HasForeignKey("NationalityId")
+                        .OnDelete(DeleteBehavior.Restrict);
+                });
+
+            modelBuilder.Entity("Lumineux.Domain.Entities.MemberAccount", b =>
+                {
+                    b.HasOne("Lumineux.Domain.Entities.Member", "Member")
+                        .WithOne()
+                        .HasForeignKey("Lumineux.Domain.Entities.MemberAccount", "MemberId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Member");
                 });
 #pragma warning restore 612, 618
         }

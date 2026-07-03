@@ -69,7 +69,16 @@ public sealed class ScanLoadTests : IClassFixture<ApiTestFixture>
         var antennaId = db.Antennas.First().Id;
 
         var members = Enumerable.Range(0, count)
-            .Select(i => new Member { FirstName = "Load", LastName = $"Member{i}", Status = "Active", AntennaId = antennaId })
+            .Select(i => new Member
+            {
+                Reference = $"M-LOAD-{i:D4}",
+                EntryDate = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc),
+                Gender = "M",
+                FirstName = "Load",
+                LastName = $"Member{i}",
+                Status = "Active",
+                AntennaId = antennaId,
+            })
             .ToList();
         db.Members.AddRange(members);
         db.SaveChanges();

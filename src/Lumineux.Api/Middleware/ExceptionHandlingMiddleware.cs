@@ -42,6 +42,12 @@ public sealed class ExceptionHandlingMiddleware
                 Instance = context.Request.Path,
             };
 
+            if (ex is DuplicateMemberException dup)
+            {
+                problem.Extensions["code"] = dup.Code;
+                problem.Extensions["duplicateMemberIds"] = dup.DuplicateMemberIds;
+            }
+
             context.Response.StatusCode = status;
             context.Response.ContentType = "application/problem+json";
             await context.Response.WriteAsJsonAsync(problem, context.RequestAborted);
@@ -53,6 +59,7 @@ public sealed class ExceptionHandlingMiddleware
         ValidationException v => (StatusCodes.Status400BadRequest, "Requête invalide",
             string.Join(" ", v.Errors.Select(e => e.ErrorMessage))),
         NotFoundException => (StatusCodes.Status404NotFound, "Ressource introuvable", ex.Message),
+        DuplicateMemberException => (StatusCodes.Status409Conflict, "Conflit", ex.Message),
         ConflictException => (StatusCodes.Status409Conflict, "Conflit", ex.Message),
         GoneException => (StatusCodes.Status410Gone, "Expiré", ex.Message),
         ForbiddenException => (StatusCodes.Status403Forbidden, "Accès refusé", ex.Message),
