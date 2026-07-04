@@ -103,6 +103,10 @@ public sealed class ApiTestFixture : WebApplicationFactory<Program>
     public string IssueMembersManagerToken() =>
         Issue(memberId: 43, "bureau-membres", Lumineux.Application.Abstractions.Permissions.ManageMembers);
 
+    /// <summary>Jeton d'un administrateur des profils du bureau (feature 004).</summary>
+    public string IssueBureauProfilesAdminToken() =>
+        Issue(memberId: 44, "bureau-profils", Lumineux.Application.Abstractions.Permissions.ManageBureauProfiles);
+
     public string IssueMemberToken()
     {
         _ = Services; // force la construction de l'hôte (et l'amorçage) avant de lire SeededMemberId
@@ -118,6 +122,88 @@ public sealed class ApiTestFixture : WebApplicationFactory<Program>
         var issuer = scope.ServiceProvider.GetRequiredService<TestTokenIssuer>();
         return issuer.Issue(memberId, name, permissions);
     }
+
+    /// <summary>Amorce un membre + compte ACTIF avec un mot de passe connu (et droits éventuels).</summary>
+    public async Task<int> SeedActiveMemberAccountAsync(string reference, string password, params string[] permissions)
+    {
+        using var scope = Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var hasher = scope.ServiceProvider.GetRequiredService<Lumineux.Domain.Abstractions.IPasswordHasher>();
+
+        var member = NewMember(reference, db.Antennas.First().Id);
+        db.Members.Add(member);
+        await db.SaveChangesAsync();
+
+        var account = MemberAccount.Provision(member, hasher.Hash(password));
+        account.ChangePassword(hasher.Hash(password)); // lève mustChangePassword
+        account.Activate();
+        db.MemberAccounts.Add(account);
+        await db.SaveChangesAsync();
+
+        // Feature 004 : les droits sont désormais portés par des profils. Pour préserver la
+        // sémantique historique de cette méthode, on obtient-ou-crée un profil par droit demandé
+        // (nom stable « Test/<permission> ») et on l'attribue au membre.
+        if (permissions.Length > 0)
+        {
+            var catalog = scope.ServiceProvider.GetRequiredService<Lumineux.Domain.Abstractions.IPermissionCatalog>();
+            foreach (var permission in permissions.Distinct(StringComparer.Ordinal))
+            {
+                var profileName = "Test/" + permission;
+                var normalized = profileName.ToLowerInvariant();
+                var profile = await db.BureauProfiles
+                    .FirstOrDefaultAsync(x => x.NameNormalized == normalized);
+                if (profile is null)
+                {
+                    profile = BureauProfile.Create(profileName, null, new[] { permission }, catalog);
+                    db.BureauProfiles.Add(profile);
+                    await db.SaveChangesAsync();
+                }
+
+                var alreadyAssigned = await db.MemberBureauProfiles
+                    .AnyAsync(x => x.MemberId == member.Id && x.BureauProfileId == profile.Id);
+                if (!alreadyAssigned)
+                {
+                    db.MemberBureauProfiles.Add(new MemberBureauProfile
+                    {
+                        MemberId = member.Id,
+                        BureauProfileId = profile.Id,
+                    });
+                }
+            }
+            await db.SaveChangesAsync();
+        }
+
+        return member.Id;
+    }
+
+    /// <summary>Amorce un membre + compte EN ATTENTE d'activation avec un mot de passe temporaire connu.</summary>
+    public async Task<int> SeedPendingMemberAccountAsync(string reference, string temporaryPassword)
+    {
+        using var scope = Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var hasher = scope.ServiceProvider.GetRequiredService<Lumineux.Domain.Abstractions.IPasswordHasher>();
+
+        var member = NewMember(reference, db.Antennas.First().Id);
+        db.Members.Add(member);
+        await db.SaveChangesAsync();
+
+        var account = MemberAccount.Provision(member, hasher.Hash(temporaryPassword));
+        db.MemberAccounts.Add(account);
+        await db.SaveChangesAsync();
+
+        return member.Id;
+    }
+
+    private static Member NewMember(string reference, int antennaId) => new()
+    {
+        Reference = reference,
+        EntryDate = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc),
+        Gender = "F",
+        LastName = "Auth",
+        FirstName = reference,
+        Status = "Active",
+        AntennaId = antennaId,
+    };
 
     protected override void Dispose(bool disposing)
     {

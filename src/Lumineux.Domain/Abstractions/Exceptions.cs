@@ -16,12 +16,29 @@ public sealed class NotFoundException : DomainException
 public sealed class ConflictException : DomainException
 {
     public ConflictException(string message) : base(message) { }
+
+    public ConflictException(string message, string code) : base(message) => Code = code;
+
+    /// <summary>Code métier optionnel exposé dans la réponse (ex. <c>last_administrator</c>).</summary>
+    public string? Code { get; }
 }
 
 /// <summary>Droit manquant pour l'opération (→ 403).</summary>
 public sealed class ForbiddenException : DomainException
 {
     public ForbiddenException(string message) : base(message) { }
+}
+
+/// <summary>Échec d'authentification (→ 401), message générique anti-énumération.</summary>
+public sealed class UnauthorizedException : DomainException
+{
+    public UnauthorizedException(string message) : base(message) { }
+}
+
+/// <summary>Changement de mot de passe requis avant tout accès (→ 403, code password_change_required).</summary>
+public sealed class PasswordChangeRequiredException : DomainException
+{
+    public PasswordChangeRequiredException(string message) : base(message) { }
 }
 
 /// <summary>Ressource/jeton expiré ou invalidé (→ 410), ex. jeton QR périmé.</summary>

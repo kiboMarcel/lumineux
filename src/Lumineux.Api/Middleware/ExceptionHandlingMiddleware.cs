@@ -48,6 +48,16 @@ public sealed class ExceptionHandlingMiddleware
                 problem.Extensions["duplicateMemberIds"] = dup.DuplicateMemberIds;
             }
 
+            if (ex is ConflictException conflict && conflict.Code is { } code)
+            {
+                problem.Extensions["code"] = code;
+            }
+
+            if (ex is PasswordChangeRequiredException)
+            {
+                problem.Extensions["code"] = "password_change_required";
+            }
+
             context.Response.StatusCode = status;
             context.Response.ContentType = "application/problem+json";
             await context.Response.WriteAsJsonAsync(problem, context.RequestAborted);
@@ -62,6 +72,8 @@ public sealed class ExceptionHandlingMiddleware
         DuplicateMemberException => (StatusCodes.Status409Conflict, "Conflit", ex.Message),
         ConflictException => (StatusCodes.Status409Conflict, "Conflit", ex.Message),
         GoneException => (StatusCodes.Status410Gone, "Expiré", ex.Message),
+        UnauthorizedException => (StatusCodes.Status401Unauthorized, "Non autorisé", ex.Message),
+        PasswordChangeRequiredException => (StatusCodes.Status403Forbidden, "Changement de mot de passe requis", ex.Message),
         ForbiddenException => (StatusCodes.Status403Forbidden, "Accès refusé", ex.Message),
         DomainException => (StatusCodes.Status400BadRequest, "Requête invalide", ex.Message),
         _ => (StatusCodes.Status500InternalServerError, "Erreur interne", "Une erreur inattendue est survenue."),

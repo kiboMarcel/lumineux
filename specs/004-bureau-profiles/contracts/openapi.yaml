@@ -1,0 +1,349 @@
+openapi: 3.0.3
+info:
+  title: Lumineux — API Profils du bureau
+  version: "1.0.0"
+  description: >
+    Contrat REST des profils du bureau. Un profil est un groupe nommé de droits fonctionnels. Les
+    membres du bureau peuvent en cumuler plusieurs ; les droits effectifs sont l'union. Toutes les
+    écritures exigent le droit `manage_bureau_profiles` ; la lecture est autorisée aux titulaires de
+    `manage_bureau_profiles` OU `manage_members`. Erreurs au format RFC 7807.
+servers:
+  - url: /api/v1
+
+security:
+  - bearerAuth: []
+
+paths:
+  /permissions:
+    get:
+      tags: [BureauProfiles]
+      summary: Lister le référentiel des droits fonctionnels connus
+      description: Retourne les droits figés côté serveur, utilisables comme choix borné dans une interface d'administration. (FR-008)
+      operationId: listPermissions
+      responses:
+        '200':
+          description: Référentiel
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/PermissionDescriptor' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /bureau-profiles:
+    get:
+      tags: [BureauProfiles]
+      summary: Lister les profils du bureau
+      description: Retourne les profils avec droits et nombre de titulaires. Accès `manage_bureau_profiles` OU `manage_members`. (FR-009)
+      operationId: listBureauProfiles
+      responses:
+        '200':
+          description: Profils
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/BureauProfileSummary' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+    post:
+      tags: [BureauProfiles]
+      summary: Créer un profil
+      description: Nom unique (insensible à la casse) et droits choisis parmi le référentiel figé. Droit requis `manage_bureau_profiles`. (FR-001, FR-008, FR-015)
+      operationId: createBureauProfile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/BureauProfileWriteRequest' }
+      responses:
+        '201':
+          description: Créé
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/BureauProfileDetail' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409':
+          description: Nom déjà utilisé (insensible à la casse)
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+
+  /bureau-profiles/{id}:
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema: { type: integer }
+
+    get:
+      tags: [BureauProfiles]
+      summary: Consulter un profil et ses titulaires
+      description: Détail complet du profil : droits + membres attributaires. Accès `manage_bureau_profiles` OU `manage_members`.
+      operationId: getBureauProfile
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/BureauProfileDetail' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+    put:
+      tags: [BureauProfiles]
+      summary: Modifier un profil
+      description: Modifie nom, description, liste de droits. Refus si le nouveau nom est déjà pris (409). Refus si le retrait de `manage_bureau_profiles` laisserait zéro administrateur (409, garde-fou). (FR-002, FR-012)
+      operationId: updateBureauProfile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/BureauProfileWriteRequest' }
+      responses:
+        '200':
+          description: Modifié
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/BureauProfileDetail' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          description: Nom déjà utilisé OU suppression du dernier administrateur (garde-fou)
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/CodedProblemDetails' }
+
+    delete:
+      tags: [BureauProfiles]
+      summary: Supprimer un profil
+      description: Refus (409) si le profil est attribué à au moins un membre ou si sa suppression laisserait zéro administrateur (garde-fou). (FR-003, FR-012)
+      operationId: deleteBureauProfile
+      responses:
+        '204': { description: Supprimé }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          description: Profil encore attribué OU suppression du dernier administrateur (garde-fou)
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/CodedProblemDetails' }
+
+  /members/{memberId}/bureau-profiles:
+    parameters:
+      - in: path
+        name: memberId
+        required: true
+        schema: { type: integer }
+
+    get:
+      tags: [BureauProfiles]
+      summary: Lister les profils d'un membre + droits effectifs
+      description: Retourne les profils attribués et l'union des droits (FR-006/009). Accès `manage_bureau_profiles` OU `manage_members`.
+      operationId: listMemberBureauProfiles
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MemberProfilesResponse' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+    post:
+      tags: [BureauProfiles]
+      summary: Attribuer un profil à un membre
+      description: Idempotent (FR-005). Refus si membre inactif (FR-014). Droit requis `manage_bureau_profiles`.
+      operationId: assignMemberBureauProfile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AssignProfileRequest' }
+      responses:
+        '204': { description: Attribution enregistrée (idempotent) }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404':
+          description: Membre ou profil introuvable
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+        '409':
+          description: Membre inactif — l'attribution n'a de sens que pour un membre actif (FR-014)
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/CodedProblemDetails' }
+
+  /members/{memberId}/bureau-profiles/{profileId}:
+    parameters:
+      - in: path
+        name: memberId
+        required: true
+        schema: { type: integer }
+      - in: path
+        name: profileId
+        required: true
+        schema: { type: integer }
+
+    delete:
+      tags: [BureauProfiles]
+      summary: Révoquer l'attribution d'un profil à un membre
+      description: Droit requis `manage_bureau_profiles`. Refus (409) si cette révocation laisserait zéro administrateur des profils (garde-fou, FR-012).
+      operationId: revokeMemberBureauProfile
+      responses:
+        '204': { description: Attribution révoquée }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404':
+          description: Membre / profil / attribution introuvable
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+        '409':
+          description: Garde-fou dernier administrateur
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/CodedProblemDetails' }
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  responses:
+    Unauthorized:
+      description: Non authentifié
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/ProblemDetails' }
+    Forbidden:
+      description: Droit manquant (`manage_bureau_profiles` requis pour les écritures)
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/ProblemDetails' }
+    NotFound:
+      description: Ressource introuvable
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/ProblemDetails' }
+    ValidationError:
+      description: Requête invalide (validation FluentValidation)
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/ProblemDetails' }
+
+  schemas:
+    PermissionDescriptor:
+      type: object
+      properties:
+        code: { type: string, example: manage_attendance }
+        label: { type: string, description: Libellé humain }
+
+    BureauProfileWriteRequest:
+      type: object
+      required: [name, permissions]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 80
+          description: Nom unique (insensible à la casse)
+        description:
+          type: string
+          maxLength: 255
+          nullable: true
+        permissions:
+          type: array
+          uniqueItems: true
+          items:
+            type: string
+            description: Droit du référentiel figé (ex. `manage_attendance`)
+
+    BureauProfileSummary:
+      type: object
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        description: { type: string, nullable: true }
+        permissions:
+          type: array
+          items: { type: string }
+        memberCount: { type: integer, description: Nombre de titulaires actuels }
+
+    BureauProfileDetail:
+      allOf:
+        - $ref: '#/components/schemas/BureauProfileSummary'
+        - type: object
+          properties:
+            members:
+              type: array
+              items: { $ref: '#/components/schemas/MemberRef' }
+
+    MemberRef:
+      type: object
+      description: Vue publique d'un membre (aucune donnée sensible — FR-016)
+      properties:
+        id: { type: integer }
+        reference: { type: string }
+        fullName: { type: string }
+        status: { type: string, example: Active }
+
+    AssignProfileRequest:
+      type: object
+      required: [profileId]
+      properties:
+        profileId: { type: integer }
+
+    MemberProfilesResponse:
+      type: object
+      properties:
+        member: { $ref: '#/components/schemas/MemberRef' }
+        profiles:
+          type: array
+          items: { $ref: '#/components/schemas/BureauProfileSummary' }
+        effectivePermissions:
+          type: array
+          uniqueItems: true
+          description: Union des droits des profils attribués (sans doublon)
+          items: { type: string }
+
+    ProblemDetails:
+      type: object
+      description: Erreur au format RFC 7807
+      properties:
+        type: { type: string }
+        title: { type: string }
+        status: { type: integer }
+        detail: { type: string }
+        instance: { type: string }
+
+    CodedProblemDetails:
+      allOf:
+        - $ref: '#/components/schemas/ProblemDetails'
+        - type: object
+          properties:
+            code:
+              type: string
+              enum:
+                - profile_in_use
+                - last_administrator
+                - duplicate_name
+                - member_inactive
+              description: |
+                - `profile_in_use` : suppression refusée (profil attribué)
+                - `last_administrator` : garde-fou — l'action laisserait zéro administrateur des profils
+                - `duplicate_name` : nom déjà utilisé (insensible à la casse)
+                - `member_inactive` : attribution refusée car le membre n'est pas au statut actif (FR-014)

@@ -43,6 +43,17 @@ public static class DependencyInjection
         services.AddScoped<IMemberReferenceGenerator, MemberReferenceGenerator>();
         services.AddSingleton<IPasswordHasher, IdentityPasswordHasher>();
 
+        // Feature 003 — authentification
+        services.Configure<AuthOptions>(configuration.GetSection(AuthOptions.SectionName));
+        services.AddScoped<ITokenIssuer, JwtTokenIssuer>();
+        services.AddScoped<IMemberPermissionRepository, MemberPermissionRepository>();
+        services.AddHostedService<PermissionBootstrapper>();
+
+        // Feature 004 — profils du bureau
+        services.AddSingleton<IPermissionCatalog, PermissionCatalog>();
+        services.AddScoped<IBureauProfileRepository, BureauProfileRepository>();
+        services.AddHostedService<BureauProfilesBootstrapper>();
+
         var emailProvider = configuration.GetSection($"{EmailOptions.SectionName}:Provider").Value ?? "Logging";
         if (string.Equals(emailProvider, "Smtp", StringComparison.OrdinalIgnoreCase))
         {

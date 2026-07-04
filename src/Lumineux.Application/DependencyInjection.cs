@@ -1,6 +1,8 @@
 using FluentValidation;
 using Lumineux.Application.AttendanceSessions;
 using Lumineux.Application.Attendances;
+using Lumineux.Application.Auth;
+using Lumineux.Application.BureauProfiles;
 using Lumineux.Application.Members;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -28,6 +30,20 @@ public static class DependencyInjection
         services.AddScoped<SearchMembersHandler>();
         services.AddScoped<GetMemberHandler>();
         services.AddScoped<UpdateMemberHandler>();
+
+        services.AddScoped<LoginHandler>();
+        services.AddScoped<ActivateAccountHandler>();
+        services.AddScoped<ChangePasswordHandler>();
+
+        services.AddScoped<CreateBureauProfileHandler>();
+        services.AddScoped<UpdateBureauProfileHandler>();
+        services.AddScoped<DeleteBureauProfileHandler>();
+        services.AddScoped<AssignProfileHandler>();
+        services.AddScoped<RevokeProfileHandler>();
+        services.AddScoped<ListBureauProfilesHandler>();
+        services.AddScoped<GetBureauProfileHandler>();
+        services.AddScoped<GetMemberProfilesHandler>();
+        services.AddScoped<ListPermissionsHandler>();
 
         return services;
     }

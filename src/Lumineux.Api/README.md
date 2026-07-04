@@ -34,7 +34,9 @@ dotnet user-secrets set "Jwt:SigningKey" "<clé-de-signature-robuste>" --project
 ```
 
 Sections de configuration : `ConnectionStrings:Default`, `Jwt` (Issuer/Audience/SigningKey/ExpirationMinutes),
-`AutoClose` (Enabled/PollingIntervalSeconds/MaxOpenHours/DefaultDurationHours), `Serilog`.
+`AutoClose` (Enabled/PollingIntervalSeconds/MaxOpenHours/DefaultDurationHours),
+`Auth` (`AccessTokenMinutes`, `MaxFailedAttempts`, `LockoutMinutes`, `PasswordMinLength`,
+`Bootstrap:MemberReference`, `Bootstrap:Permissions`), `Serilog`.
 
 > ⚠️ La clé JWT de `appsettings.Development.json` est réservée au développement. **Ne jamais l'utiliser en production.**
 
@@ -50,7 +52,10 @@ dotnet ef migrations add <Nom> --project src/Lumineux.Infrastructure --startup-p
 
 Migrations existantes : `InitialAttendance` (antennes, membres + FK antenne d'origine, sessions),
 `AddAttendances` (présences + index uniques filtrés), `MemberRegistration` (enrichissement `members`,
-`member_accounts`, nomenclatures civilités/pays/villes/districts, index uniques filtrés contacts).
+`member_accounts`, nomenclatures civilités/pays/villes/districts, index uniques filtrés contacts),
+`Authentication` (colonnes de sécurité sur `member_accounts` + table `member_permissions`),
+`BureauProfiles` (feature 004 : tables `bureau_profiles`, `bureau_profile_permissions`,
+`member_bureau_profiles` avec index d'unicité).
 Voir aussi [MIGRATION_NOTES](../../specs/002-member-registration/MIGRATION_NOTES.md) (backfill `reference`).
 
 ## Configuration e-mail (feature 002)
@@ -90,11 +95,33 @@ dotnet test                             # 104 tests (unitaires Domain/Applicatio
 | GET | `/members` | `manage_members` | Rechercher / lister les membres |
 | GET | `/members/{id}` | `manage_members` | Consulter une fiche membre |
 | PUT | `/members/{id}` | `manage_members` | Corriger une fiche membre |
+| POST | `/auth/login` | anonyme | Connexion + jeton d'accès (verrouillage anti-force brute) |
+| POST | `/auth/activate` | anonyme | Première connexion : mot de passe temporaire → nouveau + activation |
+| POST | `/auth/change-password` | authentifié | Changer son mot de passe |
+| GET | `/permissions` | `manage_bureau_profiles` OU `manage_members` | Référentiel figé des droits |
+| GET | `/bureau-profiles` | `manage_bureau_profiles` OU `manage_members` | Lister les profils du bureau |
+| GET | `/bureau-profiles/{id}` | `manage_bureau_profiles` OU `manage_members` | Détail d'un profil + titulaires |
+| POST | `/bureau-profiles` | `manage_bureau_profiles` | Créer un profil |
+| PUT | `/bureau-profiles/{id}` | `manage_bureau_profiles` | Modifier un profil (garde-fou dernier admin) |
+| DELETE | `/bureau-profiles/{id}` | `manage_bureau_profiles` | Supprimer un profil non attribué (garde-fou dernier admin) |
+| GET | `/members/{id}/bureau-profiles` | `manage_bureau_profiles` OU `manage_members` | Profils d'un membre + droits effectifs |
+| POST | `/members/{id}/bureau-profiles` | `manage_bureau_profiles` | Attribuer un profil (idempotent, refus si membre inactif) |
+| DELETE | `/members/{id}/bureau-profiles/{profileId}` | `manage_bureau_profiles` | Révoquer une attribution (garde-fou dernier admin) |
 
 Contrats de référence : [présence](../../specs/001-attendance-management/contracts/openapi.yaml),
-[membres](../../specs/002-member-registration/contracts/openapi.yaml).
+[membres](../../specs/002-member-registration/contracts/openapi.yaml),
+[authentification](../../specs/003-authentication-login/contracts/openapi.yaml),
+[profils du bureau](../../specs/004-bureau-profiles/contracts/openapi.yaml).
+
+Depuis la feature 004, les droits sont attribués **exclusivement via des profils du bureau**. Le
+mécanisme `Auth:Bootstrap:*` reste disponible comme filet d'urgence idempotent ; au premier
+démarrage, `BureauProfilesBootstrapper` crée automatiquement un profil « Amorçage » à partir des
+droits directs historiquement présents dans `member_permissions` (source héritée conservée).
 
 ## Sécurité
 
-Voir la [revue de sécurité](../../specs/001-attendance-management/checklists/security.md). Points clés :
-validation serveur, EF paramétré, JWT + policy, `qrSecret` non exposé, secrets hors code.
+Voir la [revue de sécurité présence](../../specs/001-attendance-management/checklists/security.md)
+et la [revue de sécurité authentification](../../specs/003-authentication-login/checklists/security.md).
+Points clés : validation serveur, EF paramétré, JWT + policy, `qrSecret` non exposé, secrets hors code,
+messages 401 génériques anti-énumération, verrouillage temporaire configurable, aucun secret ni jeton
+en clair dans les journaux.
