@@ -83,6 +83,11 @@ var app = builder.Build();
 app.UseMiddleware<ExceptionHandlingMiddleware>();
 app.UseMiddleware<CorrelationIdMiddleware>();
 
+// Journalisation structurée de chaque requête HTTP (méthode, chemin, code de statut, durée).
+// Garantit la traçabilité des refus d'authentification (401) produits par le middleware
+// d'autorisation, y compris pour les endpoints protégés (feature 007, FR-009 / Constitution VI).
+app.UseSerilogRequestLogging();
+
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();

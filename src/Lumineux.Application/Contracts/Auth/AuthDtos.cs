@@ -20,3 +20,9 @@ public sealed record ResetPasswordRequest(string Token, string NewPassword);
 
 /// <summary>Réponse générique anti-énumération (feature 006, FR-002). Aucun détail sur le compte.</summary>
 public sealed record GenericMessageResponse(string Message);
+
+/// <summary>
+/// Profil de session de l'utilisateur courant (feature 007, FR-004/005). Dérivé du jeton : identité
+/// minimale + droits effectifs de la session. Aucune donnée secrète n'est exposée (FR-007).
+/// </summary>
+public sealed record CurrentUserResponse(int MemberId, string DisplayName, IReadOnlyList<string> Permissions);

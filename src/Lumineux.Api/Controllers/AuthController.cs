@@ -14,19 +14,22 @@ public sealed class AuthController : ControllerBase
     private readonly ChangePasswordHandler _changePassword;
     private readonly RequestPasswordResetHandler _forgotPassword;
     private readonly ResetPasswordHandler _resetPassword;
+    private readonly GetCurrentUserHandler _currentUser;
 
     public AuthController(
         LoginHandler login,
         ActivateAccountHandler activate,
         ChangePasswordHandler changePassword,
         RequestPasswordResetHandler forgotPassword,
-        ResetPasswordHandler resetPassword)
+        ResetPasswordHandler resetPassword,
+        GetCurrentUserHandler currentUser)
     {
         _login = login;
         _activate = activate;
         _changePassword = changePassword;
         _forgotPassword = forgotPassword;
         _resetPassword = resetPassword;
+        _currentUser = currentUser;
     }
 
     /// <summary>Se connecter et obtenir un jeton d'accès (FR-001).</summary>
@@ -68,6 +71,16 @@ public sealed class AuthController : ControllerBase
         await _resetPassword.HandleAsync(request, ct);
         return NoContent();
     }
+
+    /// <summary>
+    /// Récupérer l'identité et les droits effectifs de la session courante (feature 007, FR-001).
+    /// Réservé aux utilisateurs authentifiés ; aucun droit de gestion requis. Aucun secret exposé.
+    /// </summary>
+    [HttpGet("me")]
+    [Authorize]
+    [ProducesResponseType(typeof(CurrentUserResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    public ActionResult<CurrentUserResponse> Me() => Ok(_currentUser.Handle());
 
     /// <summary>Changer son mot de passe (utilisateur connecté, FR-009).</summary>
     [HttpPost("change-password")]

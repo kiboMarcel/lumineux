@@ -1,0 +1,89 @@
+openapi: 3.0.3
+info:
+  title: Lumineux API — Profil de l'utilisateur courant (feature 007)
+  version: "1.0.0"
+  description: >
+    Endpoint de lecture permettant à l'utilisateur authentifié de récupérer son identité de
+    session et ses droits effectifs (RBAC côté client). Extension du groupe /api/v1/auth.
+
+paths:
+  /api/v1/auth/me:
+    get:
+      tags: [Auth]
+      summary: Récupérer l'identité et les droits effectifs de la session courante
+      description: >
+        Retourne le profil de session (identité + permissions) de l'utilisateur authentifié.
+        Les droits retournés sont exactement ceux portés par le jeton courant (cohérence avec les
+        décisions d'autorisation de l'API). Aucun droit de gestion n'est requis. Aucune donnée
+        secrète n'est exposée. Opération en lecture seule, sans effet de bord.
+      operationId: getCurrentUser
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Profil de session de l'utilisateur authentifié.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CurrentUserResponse"
+              examples:
+                bureauMembre:
+                  summary: Membre du bureau avec deux droits
+                  value:
+                    memberId: 42
+                    displayName: "Jane Doe"
+                    permissions: ["manage_members", "manage_attendance"]
+                membreSansDroit:
+                  summary: Membre sans droit de gestion
+                  value:
+                    memberId: 108
+                    displayName: "John Roe"
+                    permissions: []
+        "401":
+          description: >
+            Non authentifié — jeton absent, invalide ou expiré. Refus uniforme ne révélant pas la
+            cause précise (format ProblemDetails).
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetails"
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    CurrentUserResponse:
+      type: object
+      required: [memberId, displayName, permissions]
+      properties:
+        memberId:
+          type: integer
+          description: Identifiant technique du membre connecté.
+          example: 42
+        displayName:
+          type: string
+          description: Libellé d'affichage (nom complet) de l'utilisateur.
+          example: "Jane Doe"
+        permissions:
+          type: array
+          description: >
+            Droits fonctionnels effectifs de la session (peut être vide). Sans doublon,
+            ordre non significatif.
+          items:
+            type: string
+          example: ["manage_members", "manage_attendance"]
+      additionalProperties: false
+
+    ProblemDetails:
+      type: object
+      description: Format d'erreur RFC 7807 (non fuitant).
+      properties:
+        type: { type: string }
+        title: { type: string }
+        status: { type: integer, example: 401 }
+        detail: { type: string }
+      additionalProperties: true

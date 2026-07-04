@@ -22,6 +22,13 @@ public sealed class CurrentUser : ICurrentUser
 
     public string? UserName => Principal?.Identity?.Name;
 
+    public IReadOnlyCollection<string> Permissions =>
+        Principal?.Claims
+            .Where(c => c.Type == "permission")
+            .Select(c => c.Value)
+            .ToArray()
+        ?? Array.Empty<string>();
+
     public bool HasPermission(string permission) =>
         Principal?.Claims.Any(c => c.Type == "permission" && c.Value == permission) ?? false;
 }
