@@ -54,4 +54,41 @@ public sealed class SmtpEmailSender : IEmailSender
             return EmailSendOutcome.Failed;
         }
     }
+
+    public async Task<EmailSendOutcome> SendPasswordResetAsync(
+        string? toEmail, string resetLink, CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(toEmail))
+        {
+            return EmailSendOutcome.NoRecipient;
+        }
+
+        try
+        {
+            using var client = new SmtpClient(_options.Smtp.Host, _options.Smtp.Port)
+            {
+                EnableSsl = _options.Smtp.UseStartTls,
+                Credentials = new NetworkCredential(_options.Smtp.User, _options.Smtp.Password),
+            };
+            using var message = new MailMessage(_options.FromAddress, toEmail)
+            {
+                Subject = "Réinitialisation de votre mot de passe Lumineux",
+                Body = "Vous avez demandé la réinitialisation de votre mot de passe.\r\n" +
+                       "Cliquez sur le lien suivant pour définir un nouveau mot de passe :\r\n" +
+                       resetLink + "\r\n" +
+                       "Ce lien expire prochainement et ne peut être utilisé qu'une seule fois.\r\n" +
+                       "Si vous n'êtes pas à l'origine de cette demande, ignorez cet e-mail.",
+            };
+
+            await client.SendMailAsync(message, ct);
+            // Ne journalise JAMAIS le lien (contient le jeton en clair, FR-009/SC-004).
+            _logger.LogInformation("E-mail de réinitialisation envoyé to={To}", toEmail);
+            return EmailSendOutcome.Sent;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Échec de l'envoi de la réinitialisation to={To}", toEmail);
+            return EmailSendOutcome.Failed;
+        }
+    }
 }

@@ -25,4 +25,17 @@ public sealed class LoggingEmailSender : IEmailSender
         _logger.LogInformation("Invitation e-mail (dev) préparée login={LoginId} to={To}", loginId, toEmail);
         return Task.FromResult(EmailSendOutcome.Sent);
     }
+
+    public Task<EmailSendOutcome> SendPasswordResetAsync(
+        string? toEmail, string resetLink, CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(toEmail))
+        {
+            return Task.FromResult(EmailSendOutcome.NoRecipient);
+        }
+
+        // Ne journalise JAMAIS le lien (il contient le jeton en clair, FR-009/SC-004).
+        _logger.LogInformation("Réinitialisation de mot de passe (dev) préparée to={To}", toEmail);
+        return Task.FromResult(EmailSendOutcome.Sent);
+    }
 }

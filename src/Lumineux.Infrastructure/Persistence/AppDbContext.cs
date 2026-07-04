@@ -19,6 +19,8 @@ public class AppDbContext : DbContext
 
     public DbSet<MemberAccount> MemberAccounts => Set<MemberAccount>();
 
+    public DbSet<PasswordResetToken> PasswordResetTokens => Set<PasswordResetToken>();
+
     public DbSet<Civility> Civilities => Set<Civility>();
 
     public DbSet<Country> Countries => Set<Country>();

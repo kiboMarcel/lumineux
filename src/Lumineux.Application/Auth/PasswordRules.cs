@@ -41,6 +41,25 @@ public sealed class LoginValidator : AbstractValidator<Contracts.Auth.LoginReque
     }
 }
 
+public sealed class ForgotPasswordValidator : AbstractValidator<Contracts.Auth.ForgotPasswordRequest>
+{
+    public ForgotPasswordValidator()
+    {
+        RuleFor(x => x.Reference).NotEmpty().MaximumLength(60);
+    }
+}
+
+public sealed class ResetPasswordValidator : AbstractValidator<Contracts.Auth.ResetPasswordRequest>
+{
+    public ResetPasswordValidator(IOptions<AuthOptions> options)
+    {
+        RuleFor(x => x.Token).NotEmpty();
+        // Politique feature 003 réutilisée ; pas de règle « différent de l'ancien » (le membre a
+        // oublié son mot de passe — la comparaison est sans objet, cf. spec Edge Cases).
+        RuleFor(x => x.NewPassword).ApplyPolicy(options);
+    }
+}
+
 public sealed class ChangePasswordValidator : AbstractValidator<Contracts.Auth.ChangePasswordRequest>
 {
     public ChangePasswordValidator(IOptions<AuthOptions> options)

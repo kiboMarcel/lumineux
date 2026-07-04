@@ -1,0 +1,137 @@
+openapi: 3.0.3
+info:
+  title: Lumineux API — Mot de passe oublié (feature 006)
+  version: "1.0.0"
+  description: >
+    Deux endpoints anonymes de récupération de mot de passe. Conçus pour l'anti-énumération :
+    la demande répond toujours de manière générique (200) et la réinitialisation refuse de manière
+    indistincte (401) tout jeton introuvable, expiré ou consommé. Le jeton en clair circule
+    uniquement dans le lien envoyé par email ; le serveur n'en stocke que l'empreinte.
+servers:
+  - url: /api/v1
+tags:
+  - name: auth
+    description: Authentification et récupération d'accès
+
+paths:
+  /auth/forgot-password:
+    post:
+      tags: [auth]
+      summary: Demander la réinitialisation de son mot de passe (US1)
+      description: >
+        Réponse **strictement identique** (200 + même corps) quel que soit l'état du compte
+        (inexistant, sans email, verrouillé, en attente, archivé, actif). Si le compte est actif et
+        possède un email, un lien de réinitialisation à usage unique est envoyé. Aucune information
+        sur l'existence ou l'état du compte n'est divulguée (FR-002, SC-002).
+      operationId: forgotPassword
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ForgotPasswordRequest'
+      responses:
+        '200':
+          description: Réponse générique (qu'un email ait été envoyé ou non).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericMessageResponse'
+              example:
+                message: >-
+                  Si un compte correspond à cette référence et qu'un email est enregistré,
+                  un lien de réinitialisation vient d'être envoyé.
+        '400':
+          description: Requête invalide (référence manquante).
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+
+  /auth/reset-password:
+    post:
+      tags: [auth]
+      summary: Réinitialiser son mot de passe avec le jeton reçu (US2)
+      description: >
+        Valide le jeton et applique le nouveau mot de passe (politique feature 003). Succès → 204,
+        jeton consommé (usage unique), compteur d'échecs remis à zéro et verrouillage éventuel levé.
+        Jeton introuvable/expiré/consommé → 401 générique indistinct (FR-008, SC-003). Mot de passe
+        non conforme → 400 sans consommer le jeton (FR-006).
+      operationId: resetPassword
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResetPasswordRequest'
+      responses:
+        '204':
+          description: Mot de passe réinitialisé. Aucun corps. Le membre peut se connecter via /auth/login.
+        '400':
+          description: >
+            Nouveau mot de passe non conforme à la politique (longueur, lettre, chiffre).
+            Le jeton n'est PAS consommé — nouvelle tentative possible.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '401':
+          description: Jeton introuvable, expiré ou déjà consommé (refus générique indistinct).
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+
+components:
+  schemas:
+    ForgotPasswordRequest:
+      type: object
+      required: [reference]
+      properties:
+        reference:
+          type: string
+          minLength: 1
+          maxLength: 60
+          description: Identifiant de connexion (= référence membre).
+          example: LUM-2026-00042
+
+    ResetPasswordRequest:
+      type: object
+      required: [token, newPassword]
+      properties:
+        token:
+          type: string
+          description: Jeton en clair extrait du lien reçu par email (32 octets base64url).
+          example: 9f3aK7t2...base64url...Q
+        newPassword:
+          type: string
+          minLength: 8
+          description: >
+            Nouveau mot de passe. Politique feature 003 : longueur minimale (défaut 8),
+            au moins une lettre et un chiffre.
+          example: Nouveau2Mdp
+
+    GenericMessageResponse:
+      type: object
+      properties:
+        message:
+          type: string
+      required: [message]
+
+    ProblemDetails:
+      type: object
+      description: Erreur RFC 7807 homogène et non fuitante (Constitution V).
+      properties:
+        type:
+          type: string
+        title:
+          type: string
+        status:
+          type: integer
+          format: int32
+        detail:
+          type: string
+        instance:
+          type: string

@@ -1,3 +1,5 @@
+using System.Collections.Concurrent;
+using Lumineux.Domain.Abstractions;
 using Lumineux.Domain.Entities;
 using Lumineux.Infrastructure.Persistence;
 using Lumineux.Infrastructure.Persistence.Interceptors;
@@ -13,6 +15,39 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 namespace Lumineux.Api.Tests.Infrastructure;
 
 /// <summary>
+/// Envoi d'e-mail de test capturant le dernier lien de réinitialisation (feature 006), sans jamais
+/// l'écrire ailleurs. Équivalent fonctionnel de <c>LoggingEmailSender</c> pour l'invitation.
+/// </summary>
+public sealed class CapturingResetEmailSender : IEmailSender
+{
+    private readonly ConcurrentDictionary<string, string> _linksByEmail = new();
+
+    public int ResetSendCount;
+
+    public string? LastResetLink { get; private set; }
+
+    public string? ResetLinkFor(string email) =>
+        _linksByEmail.TryGetValue(email, out var link) ? link : null;
+
+    public Task<EmailSendOutcome> SendInvitationAsync(
+        string? toEmail, string loginId, string temporaryPassword, CancellationToken ct = default) =>
+        Task.FromResult(string.IsNullOrWhiteSpace(toEmail) ? EmailSendOutcome.NoRecipient : EmailSendOutcome.Sent);
+
+    public Task<EmailSendOutcome> SendPasswordResetAsync(string? toEmail, string resetLink, CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(toEmail))
+        {
+            return Task.FromResult(EmailSendOutcome.NoRecipient);
+        }
+
+        Interlocked.Increment(ref ResetSendCount);
+        _linksByEmail[toEmail] = resetLink;
+        LastResetLink = resetLink;
+        return Task.FromResult(EmailSendOutcome.Sent);
+    }
+}
+
+/// <summary>
 /// Fabrique de test : démarre l'API avec une base SQLite en mémoire (schéma créé via EnsureCreated)
 /// et une antenne d'amorçage. Fournit l'émission de jetons JWT de test.
 /// </summary>
@@ -25,6 +60,9 @@ public sealed class ApiTestFixture : WebApplicationFactory<Program>
     public int SeededMemberId { get; private set; }
 
     private readonly SqliteConnection _connection = new("DataSource=:memory:");
+
+    /// <summary>E-mail sender de test capturant les liens de réinitialisation (feature 006).</summary>
+    public CapturingResetEmailSender Email { get; } = new();
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
@@ -63,6 +101,10 @@ public sealed class ApiTestFixture : WebApplicationFactory<Program>
                 options.UseSqlite(_connection);
                 options.AddInterceptors(sp.GetRequiredService<AuditInterceptor>());
             });
+
+            // Feature 006 : capture des liens de réinitialisation (aucun SMTP en test).
+            services.RemoveAll<IEmailSender>();
+            services.AddSingleton<IEmailSender>(Email);
 
             using var provider = services.BuildServiceProvider();
             using var scope = provider.CreateScope();
@@ -197,6 +239,53 @@ public sealed class ApiTestFixture : WebApplicationFactory<Program>
         db.Members.RemoveRange(extraMembers);
 
         await db.SaveChangesAsync();
+    }
+
+    /// <summary>
+    /// Amorce un membre + compte ACTIF en contrôlant l'e-mail et le statut du membre (feature 006).
+    /// Retourne l'id du membre. Un e-mail nul et/ou un statut ≠ Active rendent le compte inéligible
+    /// à la réinitialisation (FR-011/012).
+    /// </summary>
+    public async Task<int> SeedMemberAccountAsync(string reference, string password, string? email, string status = "Active")
+    {
+        using var scope = Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var hasher = scope.ServiceProvider.GetRequiredService<IPasswordHasher>();
+
+        var member = NewMember(reference, db.Antennas.First().Id);
+        member.Email = email;
+        member.Status = status;
+        db.Members.Add(member);
+        await db.SaveChangesAsync();
+
+        var account = MemberAccount.Provision(member, hasher.Hash(password));
+        account.ChangePassword(hasher.Hash(password)); // lève mustChangePassword
+        account.Activate();
+        db.MemberAccounts.Add(account);
+        await db.SaveChangesAsync();
+
+        return member.Id;
+    }
+
+    /// <summary>
+    /// Sème un jeton de réinitialisation valide (ou expiré) pour le compte d'un membre et retourne le
+    /// jeton EN CLAIR (feature 006). Permet de tester la réinitialisation indépendamment de la demande.
+    /// </summary>
+    public async Task<string> SeedResetTokenAsync(int memberId, bool expired = false)
+    {
+        using var scope = Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var tokenService = scope.ServiceProvider.GetRequiredService<IResetTokenService>();
+
+        var account = await db.MemberAccounts.FirstAsync(a => a.MemberId == memberId);
+        var (clear, hash) = tokenService.Generate();
+        // Un jeton "expiré" est émis dans le passé (émis -60 min, durée 30 min → déjà périmé).
+        var issuedAt = expired ? DateTime.UtcNow.AddMinutes(-60) : DateTime.UtcNow;
+        var token = PasswordResetToken.Issue(account, hash, issuedAt, 30);
+        db.PasswordResetTokens.Add(token);
+        await db.SaveChangesAsync();
+
+        return clear;
     }
 
     /// <summary>Amorce un membre + compte EN ATTENTE d'activation avec un mot de passe temporaire connu.</summary>

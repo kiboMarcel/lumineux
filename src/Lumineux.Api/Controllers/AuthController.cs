@@ -12,12 +12,21 @@ public sealed class AuthController : ControllerBase
     private readonly LoginHandler _login;
     private readonly ActivateAccountHandler _activate;
     private readonly ChangePasswordHandler _changePassword;
+    private readonly RequestPasswordResetHandler _forgotPassword;
+    private readonly ResetPasswordHandler _resetPassword;
 
-    public AuthController(LoginHandler login, ActivateAccountHandler activate, ChangePasswordHandler changePassword)
+    public AuthController(
+        LoginHandler login,
+        ActivateAccountHandler activate,
+        ChangePasswordHandler changePassword,
+        RequestPasswordResetHandler forgotPassword,
+        ResetPasswordHandler resetPassword)
     {
         _login = login;
         _activate = activate;
         _changePassword = changePassword;
+        _forgotPassword = forgotPassword;
+        _resetPassword = resetPassword;
     }
 
     /// <summary>Se connecter et obtenir un jeton d'accès (FR-001).</summary>
@@ -39,6 +48,26 @@ public sealed class AuthController : ControllerBase
     [ProducesResponseType(StatusCodes.Status409Conflict)]
     public async Task<ActionResult<TokenResponse>> Activate([FromBody] ActivateAccountRequest request, CancellationToken ct) =>
         Ok(await _activate.HandleAsync(request, ct));
+
+    /// <summary>Demander la réinitialisation de son mot de passe (feature 006, FR-001). Réponse générique.</summary>
+    [HttpPost("forgot-password")]
+    [AllowAnonymous]
+    [ProducesResponseType(typeof(GenericMessageResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<ActionResult<GenericMessageResponse>> ForgotPassword([FromBody] ForgotPasswordRequest request, CancellationToken ct) =>
+        Ok(await _forgotPassword.HandleAsync(request, ct));
+
+    /// <summary>Réinitialiser son mot de passe avec le jeton reçu par email (feature 006, FR-005).</summary>
+    [HttpPost("reset-password")]
+    [AllowAnonymous]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordRequest request, CancellationToken ct)
+    {
+        await _resetPassword.HandleAsync(request, ct);
+        return NoContent();
+    }
 
     /// <summary>Changer son mot de passe (utilisateur connecté, FR-009).</summary>
     [HttpPost("change-password")]

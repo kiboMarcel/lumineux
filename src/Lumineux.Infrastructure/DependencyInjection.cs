@@ -24,6 +24,7 @@ public static class DependencyInjection
 
         services.AddSingleton<IClock, SystemClock>();
         services.AddSingleton<IQrTokenService, QrTokenService>();
+        services.AddSingleton<IResetTokenService, ResetTokenService>();
 
         services.AddScoped<IAuditLogger, AuditLogger>();
         services.AddScoped<AuditInterceptor>();
@@ -48,6 +49,9 @@ public static class DependencyInjection
         services.AddScoped<ITokenIssuer, JwtTokenIssuer>();
         services.AddScoped<IMemberPermissionRepository, MemberPermissionRepository>();
         services.AddHostedService<PermissionBootstrapper>();
+
+        // Feature 006 — mot de passe oublié
+        services.AddScoped<IPasswordResetTokenRepository, PasswordResetTokenRepository>();
 
         // Feature 004 — profils du bureau
         services.AddSingleton<IPermissionCatalog, PermissionCatalog>();

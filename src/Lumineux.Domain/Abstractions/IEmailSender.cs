@@ -16,4 +16,13 @@ public interface IEmailSender
 {
     Task<EmailSendOutcome> SendInvitationAsync(
         string? toEmail, string loginId, string temporaryPassword, CancellationToken ct = default);
+
+    /// <summary>
+    /// Envoie le lien de réinitialisation de mot de passe (feature 006). Le lien contient le jeton
+    /// en clair ; il n'est jamais journalisé. Retourne <see cref="EmailSendOutcome.NoRecipient"/> si
+    /// aucun destinataire, <see cref="EmailSendOutcome.Failed"/> en cas d'échec (la réponse API reste
+    /// générique — FR-011).
+    /// </summary>
+    Task<EmailSendOutcome> SendPasswordResetAsync(
+        string? toEmail, string resetLink, CancellationToken ct = default);
 }

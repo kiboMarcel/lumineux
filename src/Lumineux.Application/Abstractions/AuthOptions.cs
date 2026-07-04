@@ -13,6 +13,15 @@ public sealed class AuthOptions
 
     public int PasswordMinLength { get; set; } = 8;
 
+    /// <summary>Durée de vie d'un jeton de réinitialisation de mot de passe, en minutes (feature 006, FR-004).</summary>
+    public int PasswordResetMinutes { get; set; } = 30;
+
+    /// <summary>
+    /// Base d'URL de la SPA vers laquelle pointe le lien de réinitialisation (feature 006). Le handler
+    /// construit <c>{base}?token={jeton}</c>.
+    /// </summary>
+    public string PasswordResetUrlBase { get; set; } = "https://localhost:4200/auth/reset-password";
+
     /// <summary>Amorçage minimal des droits d'un compte bureau initial (feature 003, F1).</summary>
     public BootstrapOptions Bootstrap { get; set; } = new();
 }
