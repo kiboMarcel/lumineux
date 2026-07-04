@@ -24,8 +24,53 @@ public class MemberAccount : AbstractEntity
 
     public AccountActivationState ActivationState { get; private set; }
 
+    /// <summary>Échecs de connexion consécutifs (feature 003).</summary>
+    public int FailedAttempts { get; private set; }
+
+    /// <summary>Fin du verrouillage temporaire, si verrouillé (feature 003).</summary>
+    public DateTime? LockoutUntil { get; private set; }
+
+    /// <summary>Dernière connexion réussie (feature 003).</summary>
+    public DateTime? LastLoginAt { get; private set; }
+
     // Requis par EF Core.
     private MemberAccount() { }
+
+    /// <summary>Indique si le compte est actuellement verrouillé (FR-011).</summary>
+    public bool IsLockedOut(DateTime nowUtc) => LockoutUntil is { } until && until > nowUtc;
+
+    /// <summary>Enregistre un échec de connexion ; verrouille au-delà du seuil (FR-011).</summary>
+    public void RegisterFailedLogin(DateTime nowUtc, int maxAttempts, TimeSpan lockoutDuration)
+    {
+        FailedAttempts++;
+        if (FailedAttempts >= maxAttempts)
+        {
+            LockoutUntil = nowUtc + lockoutDuration;
+        }
+    }
+
+    /// <summary>Réinitialise les compteurs après une authentification réussie.</summary>
+    public void RegisterSuccessfulLogin(DateTime nowUtc)
+    {
+        FailedAttempts = 0;
+        LockoutUntil = null;
+        LastLoginAt = nowUtc;
+    }
+
+    /// <summary>Définit un nouveau mot de passe (haché) et lève l'obligation de changement.</summary>
+    public void ChangePassword(string newPasswordHash)
+    {
+        if (string.IsNullOrWhiteSpace(newPasswordHash))
+        {
+            throw new DomainException("L'empreinte du nouveau mot de passe est requise.");
+        }
+
+        PasswordHash = newPasswordHash;
+        MustChangePassword = false;
+    }
+
+    /// <summary>Active le compte (première connexion réussie).</summary>
+    public void Activate() => ActivationState = AccountActivationState.Active;
 
     /// <summary>
     /// Provisionne un compte pour un nouveau membre (FR-009/010). Le lien se fait par navigation :

@@ -1,0 +1,167 @@
+openapi: 3.0.3
+info:
+  title: Lumineux — API Authentification
+  version: "1.0.0"
+  description: >
+    Contrat REST du parcours d'authentification. Endpoints sous /api/v1/auth. `/login` et `/activate`
+    sont anonymes ; `/change-password` exige un jeton valide. Erreurs au format RFC 7807.
+    Messages génériques anti-énumération. Jetons signés et expirants (pas de rafraîchissement).
+servers:
+  - url: /api/v1
+
+paths:
+  /auth/login:
+    post:
+      tags: [Auth]
+      summary: Se connecter et obtenir un jeton d'accès
+      description: >
+        Vérifie référence + mot de passe. Succès → jeton d'accès. Identifiants invalides ou compte
+        verrouillé → 401 générique. Compte exigeant un changement de mot de passe → 403 avec
+        `code = password_change_required` (à orienter vers /auth/activate). (FR-001..007, FR-011)
+      operationId: login
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/LoginRequest' }
+      responses:
+        '200':
+          description: Authentifié
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TokenResponse' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401':
+          description: Identifiants invalides ou compte verrouillé (message générique, anti-énumération)
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+        '403':
+          description: Changement de mot de passe requis (première connexion) — code `password_change_required`
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/CodedProblemDetails' }
+
+  /auth/activate:
+    post:
+      tags: [Auth]
+      summary: Première connexion — changer le mot de passe et activer le compte
+      description: >
+        Prend référence + mot de passe temporaire + nouveau mot de passe. Vérifie le temporaire,
+        applique la politique, active le compte et délivre un jeton d'accès. (FR-007, FR-008)
+      operationId: activateAccount
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ActivateAccountRequest' }
+      responses:
+        '200':
+          description: Compte activé, jeton délivré
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TokenResponse' }
+        '400':
+          description: Nouveau mot de passe non conforme à la politique
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+        '401':
+          description: Référence / mot de passe temporaire invalide, ou compte verrouillé (générique)
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+        '409':
+          description: Compte déjà activé (aucun changement requis)
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+
+  /auth/change-password:
+    post:
+      tags: [Auth]
+      summary: Changer son mot de passe (utilisateur connecté)
+      description: Vérifie le mot de passe actuel et applique le nouveau (politique). (FR-009, FR-010)
+      operationId: changePassword
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ChangePasswordRequest' }
+      responses:
+        '204': { description: Mot de passe changé }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401':
+          description: Non authentifié, ou mot de passe actuel erroné (générique)
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  responses:
+    ValidationError:
+      description: Requête invalide
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/ProblemDetails' }
+
+  schemas:
+    LoginRequest:
+      type: object
+      required: [reference, password]
+      properties:
+        reference: { type: string, description: Référence membre (identifiant de connexion) }
+        password: { type: string, format: password }
+
+    ActivateAccountRequest:
+      type: object
+      required: [reference, temporaryPassword, newPassword]
+      properties:
+        reference: { type: string }
+        temporaryPassword: { type: string, format: password }
+        newPassword: { type: string, format: password }
+
+    ChangePasswordRequest:
+      type: object
+      required: [currentPassword, newPassword]
+      properties:
+        currentPassword: { type: string, format: password }
+        newPassword: { type: string, format: password }
+
+    TokenResponse:
+      type: object
+      properties:
+        accessToken: { type: string, description: Jeton JWT signé }
+        tokenType: { type: string, example: Bearer }
+        expiresAt: { type: string, format: date-time, description: Fin de validité du jeton }
+      # Aucun mot de passe ni empreinte n'est exposé.
+
+    ProblemDetails:
+      type: object
+      description: Erreur au format RFC 7807
+      properties:
+        type: { type: string }
+        title: { type: string }
+        status: { type: integer }
+        detail: { type: string }
+        instance: { type: string }
+
+    CodedProblemDetails:
+      allOf:
+        - $ref: '#/components/schemas/ProblemDetails'
+        - type: object
+          properties:
+            code:
+              type: string
+              enum: [password_change_required]
+              description: Indique que le compte doit être activé via /auth/activate

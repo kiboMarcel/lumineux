@@ -17,6 +17,9 @@ public sealed class MemberAccountConfiguration : IEntityTypeConfiguration<Member
         builder.Property(x => x.MustChangePassword).HasColumnName("must_change_password").IsRequired();
         builder.Property(x => x.ActivationState).HasColumnName("activation_state")
             .HasConversion<string>().HasMaxLength(20).IsRequired();
+        builder.Property(x => x.FailedAttempts).HasColumnName("failed_attempts").IsRequired();
+        builder.Property(x => x.LockoutUntil).HasColumnName("lockout_until");
+        builder.Property(x => x.LastLoginAt).HasColumnName("last_login_at");
 
         // 1-1 avec Member (navigation → insertion atomique membre + compte).
         builder.HasIndex(x => x.MemberId).IsUnique();
