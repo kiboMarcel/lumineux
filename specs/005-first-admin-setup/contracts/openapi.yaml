@@ -1,0 +1,122 @@
+openapi: 3.0.3
+info:
+  title: Lumineux — API Installation
+  version: "1.0.0"
+  description: >
+    Contrat REST de la route d'installation du premier administrateur. Route anonyme unique
+    autobloquée dès qu'un membre actif dispose du droit `manage_bureau_profiles`. Le refus
+    `already_installed` est **prioritaire** sur toute erreur de validation afin de ne pas
+    divulguer la structure du payload attendu à un tiers.
+servers:
+  - url: /api/v1
+
+paths:
+  /setup/first-admin:
+    post:
+      tags: [Setup]
+      summary: Installer le premier administrateur (base vierge)
+      description: >
+        Crée atomiquement un membre actif, son compte de connexion activé, le profil
+        « Administrateur » (portant l'ensemble des droits fonctionnels connus) — ou le
+        réutilise s'il existe déjà — et l'attribution du profil au membre. Retourne un jeton
+        d'accès JWT immédiatement utilisable. Toute tentative ultérieure est refusée avec
+        `409 already_installed` dès qu'un admin actif existe (FR-004, FR-005).
+      operationId: installFirstAdmin
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/InstallFirstAdminRequest' }
+      responses:
+        '201':
+          description: Administrateur installé ; jeton d'accès retourné
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TokenResponse' }
+        '400':
+          description: Payload invalide (validation FluentValidation ou politique de mot de passe non respectée) — retourné uniquement si aucun admin n'existe encore
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+        '409':
+          description: >
+            Installation impossible. Codes métier :
+              - `already_installed` — un admin actif existe déjà (prioritaire sur toutes autres erreurs, FR-005)
+              - `contact_in_use` — email ou mobile déjà utilisé par un membre actif (FR-014)
+              - `duplicate_reference` — collision très rare sur la référence auto-générée
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/CodedProblemDetails' }
+
+components:
+  schemas:
+    InstallFirstAdminRequest:
+      type: object
+      required: [lastName, firstName, gender, password]
+      properties:
+        lastName:
+          type: string
+          minLength: 1
+          maxLength: 80
+        firstName:
+          type: string
+          minLength: 1
+          maxLength: 80
+        gender:
+          type: string
+          enum: [M, F]
+          description: Genre du membre (cohérent avec l'entité Member)
+        password:
+          type: string
+          format: password
+          description: >
+            Doit respecter la politique de mot de passe (feature 003 : longueur >= AuthOptions.PasswordMinLength,
+            au moins une lettre et un chiffre).
+        email:
+          type: string
+          format: email
+          nullable: true
+          maxLength: 254
+          description: Facultatif ; sera vérifié pour absence de collision (contact_in_use).
+        mobile:
+          type: string
+          nullable: true
+          maxLength: 30
+
+    TokenResponse:
+      type: object
+      description: Identique au TokenResponse de la feature 003.
+      properties:
+        accessToken:
+          type: string
+          description: Jeton JWT signé portant les droits effectifs du nouvel administrateur.
+        tokenType:
+          type: string
+          example: Bearer
+        expiresAt:
+          type: string
+          format: date-time
+
+    ProblemDetails:
+      type: object
+      description: Erreur au format RFC 7807.
+      properties:
+        type: { type: string }
+        title: { type: string }
+        status: { type: integer }
+        detail: { type: string }
+        instance: { type: string }
+
+    CodedProblemDetails:
+      allOf:
+        - $ref: '#/components/schemas/ProblemDetails'
+        - type: object
+          properties:
+            code:
+              type: string
+              enum:
+                - already_installed
+                - contact_in_use
+                - duplicate_reference
+              description: Code métier explicite.

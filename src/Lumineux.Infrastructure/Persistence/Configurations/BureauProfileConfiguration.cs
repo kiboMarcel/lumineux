@@ -52,8 +52,8 @@ public sealed class MemberBureauProfileConfiguration : IEntityTypeConfiguration<
         builder.Property(x => x.MemberId).HasColumnName("member").IsRequired();
         builder.Property(x => x.BureauProfileId).HasColumnName("bureau_profile").IsRequired();
 
-        builder.HasOne<Member>().WithMany().HasForeignKey(x => x.MemberId).OnDelete(DeleteBehavior.Cascade);
-        builder.HasOne<BureauProfile>().WithMany().HasForeignKey(x => x.BureauProfileId).OnDelete(DeleteBehavior.Cascade);
+        builder.HasOne(x => x.Member).WithMany().HasForeignKey(x => x.MemberId).OnDelete(DeleteBehavior.Cascade);
+        builder.HasOne(x => x.BureauProfile).WithMany().HasForeignKey(x => x.BureauProfileId).OnDelete(DeleteBehavior.Cascade);
         builder.HasIndex(x => new { x.MemberId, x.BureauProfileId }).IsUnique();
 
         AuditColumns.Apply(builder);

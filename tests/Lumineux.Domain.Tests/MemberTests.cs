@@ -65,4 +65,28 @@ public sealed class MemberTests
         var act = () => MemberAccount.Provision(member, "  ");
         act.Should().Throw<DomainException>();
     }
+
+    [Fact]
+    public void Create_with_nullable_antenna_null_creates_member_without_antenna()
+    {
+        var member = Member.Create("LUM-2026-00042", Now, "Doe", "Jane", "F", antennaId: (int?)null);
+
+        member.AntennaId.Should().BeNull();
+        member.IsActive.Should().BeTrue();
+    }
+
+    [Fact]
+    public void Create_with_nullable_antenna_value_creates_member_with_antenna()
+    {
+        var member = Member.Create("LUM-2026-00043", Now, "Doe", "Jane", "F", antennaId: (int?)7);
+
+        member.AntennaId.Should().Be(7);
+    }
+
+    [Fact]
+    public void Create_with_nullable_antenna_zero_throws()
+    {
+        var act = () => Member.Create("LUM-2026-00044", Now, "Doe", "Jane", "F", antennaId: (int?)0);
+        act.Should().Throw<DomainException>();
+    }
 }

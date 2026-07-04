@@ -176,6 +176,29 @@ public sealed class ApiTestFixture : WebApplicationFactory<Program>
         return member.Id;
     }
 
+    /// <summary>
+    /// Réinitialise l'état d'installation (feature 005) : supprime tous les profils, attributions,
+    /// comptes de connexion et membres autres que ceux d'amorçage du fixture. Permet à chaque test
+    /// qui exerce `/setup/first-admin` de repartir sur une base « vierge côté admins ».
+    /// </summary>
+    public async Task ResetInstallationStateAsync()
+    {
+        using var scope = Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+        db.MemberBureauProfiles.RemoveRange(db.MemberBureauProfiles);
+        db.BureauProfilePermissions.RemoveRange(db.BureauProfilePermissions);
+        db.BureauProfiles.RemoveRange(db.BureauProfiles);
+        db.MemberPermissions.RemoveRange(db.MemberPermissions);
+        db.MemberAccounts.RemoveRange(db.MemberAccounts);
+
+        var seededId = SeededMemberId;
+        var extraMembers = db.Members.Where(m => m.Id != seededId).ToList();
+        db.Members.RemoveRange(extraMembers);
+
+        await db.SaveChangesAsync();
+    }
+
     /// <summary>Amorce un membre + compte EN ATTENTE d'activation avec un mot de passe temporaire connu.</summary>
     public async Task<int> SeedPendingMemberAccountAsync(string reference, string temporaryPassword)
     {

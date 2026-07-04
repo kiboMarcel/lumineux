@@ -60,6 +60,27 @@ public class Member : AbstractEntity
         string gender,
         int antennaId)
     {
+        if (antennaId <= 0)
+        {
+            throw new DomainException("L'antenne d'origine est requise.");
+        }
+        return Create(reference, entryDateUtc, lastName, firstName, gender, (int?)antennaId);
+    }
+
+    /// <summary>
+    /// Surcharge acceptant une antenne d'origine <b>optionnelle</b> (feature 005 — installation du
+    /// premier administrateur : le super-admin n'est pas nécessairement rattaché à une antenne au
+    /// moment de son provisionnement). Les autres invariants (référence, nom, prénom, genre) sont
+    /// vérifiés à l'identique.
+    /// </summary>
+    public static Member Create(
+        string reference,
+        DateTime entryDateUtc,
+        string lastName,
+        string firstName,
+        string gender,
+        int? antennaId)
+    {
         if (string.IsNullOrWhiteSpace(reference))
         {
             throw new DomainException("La référence du membre est requise.");
@@ -75,7 +96,7 @@ public class Member : AbstractEntity
             throw new DomainException("Le sexe doit être 'M' ou 'F'.");
         }
 
-        if (antennaId <= 0)
+        if (antennaId is int a && a <= 0)
         {
             throw new DomainException("L'antenne d'origine est requise.");
         }

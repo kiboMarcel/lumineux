@@ -95,6 +95,7 @@ dotnet test                             # 104 tests (unitaires Domain/Applicatio
 | GET | `/members` | `manage_members` | Rechercher / lister les membres |
 | GET | `/members/{id}` | `manage_members` | Consulter une fiche membre |
 | PUT | `/members/{id}` | `manage_members` | Corriger une fiche membre |
+| POST | `/setup/first-admin` | anonyme (verrou : 0 admin) | **Installer le premier administrateur** sur base vierge (feature 005) |
 | POST | `/auth/login` | anonyme | Connexion + jeton d'accès (verrouillage anti-force brute) |
 | POST | `/auth/activate` | anonyme | Première connexion : mot de passe temporaire → nouveau + activation |
 | POST | `/auth/change-password` | authentifié | Changer son mot de passe |
@@ -111,7 +112,8 @@ dotnet test                             # 104 tests (unitaires Domain/Applicatio
 Contrats de référence : [présence](../../specs/001-attendance-management/contracts/openapi.yaml),
 [membres](../../specs/002-member-registration/contracts/openapi.yaml),
 [authentification](../../specs/003-authentication-login/contracts/openapi.yaml),
-[profils du bureau](../../specs/004-bureau-profiles/contracts/openapi.yaml).
+[profils du bureau](../../specs/004-bureau-profiles/contracts/openapi.yaml),
+[installation du premier admin](../../specs/005-first-admin-setup/contracts/openapi.yaml).
 
 Depuis la feature 004, les droits sont attribués **exclusivement via des profils du bureau**. Le
 mécanisme `Auth:Bootstrap:*` reste disponible comme filet d'urgence idempotent ; au premier

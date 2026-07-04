@@ -4,6 +4,7 @@ using Lumineux.Application.Attendances;
 using Lumineux.Application.Auth;
 using Lumineux.Application.BureauProfiles;
 using Lumineux.Application.Members;
+using Lumineux.Application.Setup;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Lumineux.Application;
@@ -44,6 +45,8 @@ public static class DependencyInjection
         services.AddScoped<GetBureauProfileHandler>();
         services.AddScoped<GetMemberProfilesHandler>();
         services.AddScoped<ListPermissionsHandler>();
+
+        services.AddScoped<InstallFirstAdminHandler>();
 
         return services;
     }
