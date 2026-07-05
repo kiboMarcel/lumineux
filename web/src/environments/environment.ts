@@ -4,6 +4,8 @@
  */
 export const environment = {
   production: false,
-  apiBaseUrl: 'https://localhost:5001',
+  // URL de l'API en dev = applicationUrl de src/Lumineux.Api/Properties/launchSettings.json
+  // (https://localhost:4311 ; alternative http://localhost:4312 si le certificat de dev n'est pas approuvé).
+  apiBaseUrl: 'https://localhost:4311',
   passwordMinLength: 8,
 };
