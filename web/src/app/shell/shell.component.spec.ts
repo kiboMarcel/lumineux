@@ -41,4 +41,11 @@ describe('ShellComponent — navigation RBAC (SC-003)', () => {
     const comp = TestBed.createComponent(ShellComponent).componentInstance;
     expect(comp.visibleModules()).toHaveLength(0);
   });
+
+  it('affiche « Présences » comme lien réel pour le droit manage_attendance (feature 014)', () => {
+    authenticate(['manage_attendance']);
+    const comp = TestBed.createComponent(ShellComponent).componentInstance;
+    const presences = comp.visibleModules().find((m) => m.label === 'Présences');
+    expect(presences?.route).toBe('/attendance');
+  });
 });

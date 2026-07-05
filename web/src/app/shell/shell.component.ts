@@ -56,7 +56,7 @@ export class ShellComponent {
   private readonly modules: NavItem[] = [
     { label: 'Membres', permission: 'manage_members', route: '/members' },
     { label: 'Profils du bureau', route: '/bureau-profiles', anyPermissions: ['manage_bureau_profiles', 'manage_members'] },
-    { label: 'Présences', permission: 'manage_attendance' },
+    { label: 'Présences', permission: 'manage_attendance', route: '/attendance' },
   ];
 
   /** Modules visibles selon les droits de la session (RBAC d'affichage ; l'API reste l'autorité). */

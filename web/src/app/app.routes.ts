@@ -14,12 +14,15 @@ import { ProfileFormComponent } from './features/bureau-profiles/profile-form/pr
 import { ProfileListComponent } from './features/bureau-profiles/profile-list/profile-list.component';
 import { ResetPasswordComponent } from './features/reset-password/reset-password.component';
 import { SetupComponent } from './features/setup/setup.component';
+import { SessionStartComponent } from './features/attendance/session-start/session-start.component';
+import { SessionRunComponent } from './features/attendance/session-run/session-run.component';
 import { ShellComponent } from './shell/shell.component';
 
 const manageMembers = { permission: 'manage_members' };
 const manageBureauProfiles = { permission: 'manage_bureau_profiles' };
 // Lecture élargie (feature 011) : administration des profils OU gestion des membres.
 const profilesReadAccess = { anyPermissions: ['manage_bureau_profiles', 'manage_members'] };
+const manageAttendance = { permission: 'manage_attendance' };
 
 export const routes: Routes = [
   // Routes publiques
@@ -52,6 +55,10 @@ export const routes: Routes = [
 
       // Profils & droits d'un membre (feature 011) — lecture élargie
       { path: 'members/:id/profiles', component: MemberProfilesComponent, canActivate: [permissionGuard], data: profilesReadAccess },
+
+      // Module Présences (feature 014) — droit manage_attendance requis
+      { path: 'attendance', component: SessionStartComponent, canActivate: [permissionGuard], data: manageAttendance },
+      { path: 'attendance/sessions/:id', component: SessionRunComponent, canActivate: [permissionGuard], data: manageAttendance },
     ],
   },
 
