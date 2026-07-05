@@ -8,11 +8,18 @@ import { LoginComponent } from './features/login/login.component';
 import { MemberDetailComponent } from './features/members/member-detail/member-detail.component';
 import { MemberFormComponent } from './features/members/member-form/member-form.component';
 import { MemberListComponent } from './features/members/member-list/member-list.component';
+import { MemberProfilesComponent } from './features/bureau-profiles/member-profiles/member-profiles.component';
+import { ProfileDetailComponent } from './features/bureau-profiles/profile-detail/profile-detail.component';
+import { ProfileFormComponent } from './features/bureau-profiles/profile-form/profile-form.component';
+import { ProfileListComponent } from './features/bureau-profiles/profile-list/profile-list.component';
 import { ResetPasswordComponent } from './features/reset-password/reset-password.component';
 import { SetupComponent } from './features/setup/setup.component';
 import { ShellComponent } from './shell/shell.component';
 
 const manageMembers = { permission: 'manage_members' };
+const manageBureauProfiles = { permission: 'manage_bureau_profiles' };
+// Lecture élargie (feature 011) : administration des profils OU gestion des membres.
+const profilesReadAccess = { anyPermissions: ['manage_bureau_profiles', 'manage_members'] };
 
 export const routes: Routes = [
   // Routes publiques
@@ -36,6 +43,15 @@ export const routes: Routes = [
       { path: 'members/new', component: MemberFormComponent, canActivate: [permissionGuard], data: manageMembers },
       { path: 'members/:id', component: MemberDetailComponent, canActivate: [permissionGuard], data: manageMembers },
       { path: 'members/:id/edit', component: MemberFormComponent, canActivate: [permissionGuard], data: manageMembers },
+
+      // Module Profils du bureau (feature 011) — lecture élargie / écriture réservée admin
+      { path: 'bureau-profiles', component: ProfileListComponent, canActivate: [permissionGuard], data: profilesReadAccess },
+      { path: 'bureau-profiles/new', component: ProfileFormComponent, canActivate: [permissionGuard], data: manageBureauProfiles },
+      { path: 'bureau-profiles/:id', component: ProfileDetailComponent, canActivate: [permissionGuard], data: profilesReadAccess },
+      { path: 'bureau-profiles/:id/edit', component: ProfileFormComponent, canActivate: [permissionGuard], data: manageBureauProfiles },
+
+      // Profils & droits d'un membre (feature 011) — lecture élargie
+      { path: 'members/:id/profiles', component: MemberProfilesComponent, canActivate: [permissionGuard], data: profilesReadAccess },
     ],
   },
 

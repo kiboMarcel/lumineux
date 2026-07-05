@@ -5,8 +5,11 @@ import { SessionStore } from '../core/session/session-store';
 
 interface NavItem {
   label: string;
-  permission: string;
   route?: string;
+  /** Droit unique requis pour voir l'entrée. */
+  permission?: string;
+  /** OU l'un de ces droits (any-of, feature 011). */
+  anyPermissions?: string[];
 }
 
 /**
@@ -22,13 +25,11 @@ interface NavItem {
         <strong>Lumineux</strong>
         <nav class="lx-nav" aria-label="Navigation principale">
           <a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">Accueil</a>
-          @for (item of visibleModules(); track item.permission) {
+          @for (item of visibleModules(); track item.label) {
             @if (item.route) {
-              <a [routerLink]="item.route" routerLinkActive="active" [attr.data-permission]="item.permission">{{ item.label }}</a>
+              <a [routerLink]="item.route" routerLinkActive="active">{{ item.label }}</a>
             } @else {
-              <button type="button" class="lx-nav-item" (click)="comingSoon()" [attr.data-permission]="item.permission">
-                {{ item.label }}
-              </button>
+              <button type="button" class="lx-nav-item" (click)="comingSoon()">{{ item.label }}</button>
             }
           }
           <a routerLink="/account/change-password" routerLinkActive="active">Mot de passe</a>
@@ -54,14 +55,21 @@ export class ShellComponent {
 
   private readonly modules: NavItem[] = [
     { label: 'Membres', permission: 'manage_members', route: '/members' },
-    { label: 'Profils du bureau', permission: 'manage_bureau_profiles' },
+    { label: 'Profils du bureau', route: '/bureau-profiles', anyPermissions: ['manage_bureau_profiles', 'manage_members'] },
     { label: 'Présences', permission: 'manage_attendance' },
   ];
 
-  /** Modules visibles = ceux pour lesquels la session détient le droit (RBAC d'affichage, FR-005). */
+  /** Modules visibles selon les droits de la session (RBAC d'affichage ; l'API reste l'autorité). */
   readonly visibleModules = computed(() =>
-    this.modules.filter((m) => this.session.hasPermission(m.permission)),
+    this.modules.filter((m) => this.canSee(m)),
   );
+
+  private canSee(item: NavItem): boolean {
+    if (item.anyPermissions?.length) {
+      return item.anyPermissions.some((p) => this.session.hasPermission(p));
+    }
+    return item.permission ? this.session.hasPermission(item.permission) : true;
+  }
 
   comingSoon(): void {
     this.notifier.info('Module à venir dans un prochain incrément.');

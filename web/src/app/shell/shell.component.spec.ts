@@ -23,10 +23,17 @@ describe('ShellComponent — navigation RBAC (SC-003)', () => {
     });
   });
 
-  it("n'affiche que les modules autorisés", () => {
+  it("affiche les modules autorisés (dont Profils en lecture élargie)", () => {
+    // manage_members ouvre « Membres » et — en lecture élargie any-of — « Profils du bureau ».
     authenticate(['manage_members']);
     const comp = TestBed.createComponent(ShellComponent).componentInstance;
-    expect(comp.visibleModules().map((m) => m.permission)).toEqual(['manage_members']);
+    expect(comp.visibleModules().map((m) => m.label)).toEqual(['Membres', 'Profils du bureau']);
+  });
+
+  it('affiche Profils du bureau pour un administrateur des profils', () => {
+    authenticate(['manage_bureau_profiles']);
+    const comp = TestBed.createComponent(ShellComponent).componentInstance;
+    expect(comp.visibleModules().map((m) => m.label)).toEqual(['Profils du bureau']);
   });
 
   it("n'affiche aucun module de gestion sans droit", () => {

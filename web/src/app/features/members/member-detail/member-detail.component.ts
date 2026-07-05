@@ -16,7 +16,10 @@ import { MemberResponse } from '../member.models';
       } @else if (member(); as m) {
         <div class="lx-topbar" style="border:0; padding:0; margin-bottom:1rem;">
           <h1 class="lx-title" style="margin:0;">{{ m.firstName }} {{ m.lastName }}</h1>
-          <a class="lx-btn lx-btn-ghost" [routerLink]="['/members', m.id, 'edit']">Modifier</a>
+          <div class="lx-links" style="margin:0;">
+            <a class="lx-btn lx-btn-ghost" [routerLink]="['/members', m.id, 'profiles']">Profils & droits</a>
+            <a class="lx-btn lx-btn-ghost" [routerLink]="['/members', m.id, 'edit']">Modifier</a>
+          </div>
         </div>
         <dl style="display:grid; grid-template-columns:auto 1fr; gap:0.4rem 1rem;">
           <dt class="lx-muted">Référence</dt><dd>{{ m.reference }}</dd>

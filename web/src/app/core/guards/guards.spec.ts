@@ -56,6 +56,22 @@ describe('gardes', () => {
     expect(result).toBeInstanceOf(UrlTree);
   });
 
+  it('permissionGuard any-of : autorise si l\'un des droits est présent', () => {
+    authenticate(['manage_members']);
+    const result = TestBed.runInInjectionContext(() =>
+      permissionGuard(routeWith({ anyPermissions: ['manage_bureau_profiles', 'manage_members'] }), state('/bureau-profiles')),
+    );
+    expect(result).toBe(true);
+  });
+
+  it('permissionGuard any-of : refuse si aucun des droits n\'est présent', () => {
+    authenticate([]);
+    const result = TestBed.runInInjectionContext(() =>
+      permissionGuard(routeWith({ anyPermissions: ['manage_bureau_profiles', 'manage_members'] }), state('/bureau-profiles')),
+    );
+    expect(result).toBeInstanceOf(UrlTree);
+  });
+
   it('guestOnly : redirige un utilisateur déjà connecté', () => {
     authenticate();
     const result = TestBed.runInInjectionContext(() => guestOnly(routeWith(), state('/login')));

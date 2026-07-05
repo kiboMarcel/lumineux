@@ -14,8 +14,10 @@ export const authGuard: CanActivateFn = (_route, state) => {
 };
 
 /**
- * Exige un droit précis (déclaré dans `route.data.permission`) pour l'affichage (FR-005). L'API reste
- * l'autorité. Sert les futurs modules protégés ; défini dès le socle.
+ * Contrôle d'affichage basé sur les droits. Autorise si :
+ * - `route.data.permission` (droit **unique** requis) est détenu, OU
+ * - `route.data.anyPermissions` (liste) contient **au moins un** droit détenu (any-of, feature 011).
+ * Sans contrainte déclarée, l'accès est autorisé. L'API reste l'autorité (403 géré).
  */
 export const permissionGuard: CanActivateFn = (route) => {
   const session = inject(SessionStore);
@@ -25,10 +27,17 @@ export const permissionGuard: CanActivateFn = (route) => {
   if (!session.isAuthenticated()) {
     return router.createUrlTree(['/login']);
   }
+
   const required = route.data?.['permission'] as string | undefined;
-  if (!required || session.hasPermission(required)) {
+  const anyOf = route.data?.['anyPermissions'] as string[] | undefined;
+
+  const singleOk = required ? session.hasPermission(required) : true;
+  const anyOk = anyOf && anyOf.length > 0 ? anyOf.some((p) => session.hasPermission(p)) : true;
+
+  if ((!required && !anyOf) || (required && singleOk) || (anyOf && anyOk)) {
     return true;
   }
+
   notifier.error("Vous n'avez pas les droits nécessaires pour accéder à cette page.");
   return router.createUrlTree(['/']);
 };
