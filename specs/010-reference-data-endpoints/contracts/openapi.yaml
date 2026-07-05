@@ -1,0 +1,116 @@
+openapi: 3.0.3
+info:
+  title: Lumineux API — Données de référence (feature 010)
+  version: "1.0.0"
+  description: >
+    Endpoints de lecture des nomenclatures (antennes, civilités, villes, districts,
+    pays/nationalités) pour alimenter les listes de sélection du SPA. Lecture seule, authentifié.
+
+paths:
+  /api/v1/reference/antennas:
+    get:
+      tags: [Reference]
+      summary: Lister les antennes actives (US1)
+      operationId: getAntennas
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: Antennes actives, triées par libellé.
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: "#/components/schemas/ReferenceItem" } }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /api/v1/reference/civilities:
+    get:
+      tags: [Reference]
+      summary: Lister les civilités actives
+      operationId: getCivilities
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: Civilités actives, triées par libellé.
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: "#/components/schemas/ReferenceItem" } }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /api/v1/reference/cities:
+    get:
+      tags: [Reference]
+      summary: Lister les villes actives
+      operationId: getCities
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: Villes actives, triées par libellé.
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: "#/components/schemas/ReferenceItem" } }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /api/v1/reference/districts:
+    get:
+      tags: [Reference]
+      summary: Lister les districts actifs
+      operationId: getDistricts
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: Districts actifs, triés par libellé.
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: "#/components/schemas/ReferenceItem" } }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /api/v1/reference/countries:
+    get:
+      tags: [Reference]
+      summary: Lister les pays / nationalités actifs
+      operationId: getCountries
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: Pays actifs, triés par libellé de pays.
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: "#/components/schemas/Country" } }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+components:
+  securitySchemes:
+    bearerAuth: { type: http, scheme: bearer, bearerFormat: JWT }
+
+  responses:
+    Unauthorized:
+      description: Non authentifié.
+      content:
+        application/problem+json:
+          schema: { $ref: "#/components/schemas/ProblemDetails" }
+
+  schemas:
+    ReferenceItem:
+      type: object
+      required: [id, code, label]
+      properties:
+        id: { type: integer, example: 1 }
+        code: { type: string, example: "A1" }
+        label: { type: string, example: "Antenne 1" }
+      additionalProperties: false
+
+    Country:
+      type: object
+      required: [id, code, country, nationality]
+      properties:
+        id: { type: integer, example: 12 }
+        code: { type: string, example: "CI" }
+        country: { type: string, example: "Côte d'Ivoire" }
+        nationality: { type: string, example: "Ivoirienne" }
+      additionalProperties: false
+
+    ProblemDetails:
+      type: object
+      properties:
+        title: { type: string }
+        status: { type: integer, example: 401 }
+      additionalProperties: true

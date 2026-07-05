@@ -53,6 +53,9 @@ public static class DependencyInjection
         // Feature 006 — mot de passe oublié
         services.AddScoped<IPasswordResetTokenRepository, PasswordResetTokenRepository>();
 
+        // Feature 010 — données de référence (nomenclatures, lecture seule)
+        services.AddScoped<IReferenceDataRepository, ReferenceDataRepository>();
+
         // Feature 004 — profils du bureau
         services.AddSingleton<IPermissionCatalog, PermissionCatalog>();
         services.AddScoped<IBureauProfileRepository, BureauProfileRepository>();

@@ -39,6 +39,8 @@ public static class DependencyInjection
         services.AddScoped<ResetPasswordHandler>();
         services.AddScoped<GetCurrentUserHandler>();
 
+        services.AddScoped<Reference.GetReferenceDataHandler>();
+
         services.AddScoped<CreateBureauProfileHandler>();
         services.AddScoped<UpdateBureauProfileHandler>();
         services.AddScoped<DeleteBureauProfileHandler>();
