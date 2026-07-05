@@ -1,13 +1,18 @@
 import { Routes } from '@angular/router';
-import { authGuard, guestOnly, setupGuard } from './core/guards/guards';
+import { authGuard, guestOnly, permissionGuard, setupGuard } from './core/guards/guards';
 import { ActivateComponent } from './features/activate/activate.component';
 import { ChangePasswordComponent } from './features/change-password/change-password.component';
 import { ForgotPasswordComponent } from './features/forgot-password/forgot-password.component';
 import { HomeComponent } from './features/home/home.component';
 import { LoginComponent } from './features/login/login.component';
+import { MemberDetailComponent } from './features/members/member-detail/member-detail.component';
+import { MemberFormComponent } from './features/members/member-form/member-form.component';
+import { MemberListComponent } from './features/members/member-list/member-list.component';
 import { ResetPasswordComponent } from './features/reset-password/reset-password.component';
 import { SetupComponent } from './features/setup/setup.component';
 import { ShellComponent } from './shell/shell.component';
+
+const manageMembers = { permission: 'manage_members' };
 
 export const routes: Routes = [
   // Routes publiques
@@ -25,6 +30,12 @@ export const routes: Routes = [
     children: [
       { path: '', component: HomeComponent },
       { path: 'account/change-password', component: ChangePasswordComponent },
+
+      // Module Membres (feature 009) — droit manage_members requis
+      { path: 'members', component: MemberListComponent, canActivate: [permissionGuard], data: manageMembers },
+      { path: 'members/new', component: MemberFormComponent, canActivate: [permissionGuard], data: manageMembers },
+      { path: 'members/:id', component: MemberDetailComponent, canActivate: [permissionGuard], data: manageMembers },
+      { path: 'members/:id/edit', component: MemberFormComponent, canActivate: [permissionGuard], data: manageMembers },
     ],
   },
 

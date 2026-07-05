@@ -6,6 +6,7 @@ import { SessionStore } from '../core/session/session-store';
 interface NavItem {
   label: string;
   permission: string;
+  route?: string;
 }
 
 /**
@@ -22,9 +23,13 @@ interface NavItem {
         <nav class="lx-nav" aria-label="Navigation principale">
           <a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">Accueil</a>
           @for (item of visibleModules(); track item.permission) {
-            <button type="button" class="lx-nav-item" (click)="comingSoon()" [attr.data-permission]="item.permission">
-              {{ item.label }}
-            </button>
+            @if (item.route) {
+              <a [routerLink]="item.route" routerLinkActive="active" [attr.data-permission]="item.permission">{{ item.label }}</a>
+            } @else {
+              <button type="button" class="lx-nav-item" (click)="comingSoon()" [attr.data-permission]="item.permission">
+                {{ item.label }}
+              </button>
+            }
           }
           <a routerLink="/account/change-password" routerLinkActive="active">Mot de passe</a>
         </nav>
@@ -48,7 +53,7 @@ export class ShellComponent {
   private readonly notifier = inject(NotificationService);
 
   private readonly modules: NavItem[] = [
-    { label: 'Membres', permission: 'manage_members' },
+    { label: 'Membres', permission: 'manage_members', route: '/members' },
     { label: 'Profils du bureau', permission: 'manage_bureau_profiles' },
     { label: 'Présences', permission: 'manage_attendance' },
   ];
