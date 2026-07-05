@@ -5,19 +5,24 @@ import { ActivatedRoute, Router, convertToParamMap, provideRouter } from '@angul
 import { of, throwError } from 'rxjs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { AuthApi } from '../../core/api/auth-api';
+import { SetupApi } from '../../core/api/setup-api';
 import { LoginComponent } from './login.component';
 
 describe('LoginComponent (US1, FR-010)', () => {
   const authApi = { login: vi.fn() };
+  const setupApi = { status: vi.fn() };
 
   beforeEach(() => {
     authApi.login.mockReset();
+    setupApi.status.mockReset();
+    setupApi.status.mockReturnValue(of({ installed: true })); // défaut : instance installée (pas de lien)
     TestBed.configureTestingModule({
       providers: [
         provideHttpClient(),
         provideHttpClientTesting(),
         provideRouter([]),
         { provide: AuthApi, useValue: authApi },
+        { provide: SetupApi, useValue: setupApi },
         { provide: ActivatedRoute, useValue: { snapshot: { queryParamMap: convertToParamMap({}) } } },
       ],
     });
@@ -65,6 +70,35 @@ describe('LoginComponent (US1, FR-010)', () => {
 
     comp.submit();
 
+    expect(navSpy).toHaveBeenCalledWith('/');
+  });
+
+  // Feature 013 — découvrabilité de l'installation
+
+  it('[US1] affiche le lien « Première installation » quand l\'instance n\'est pas installée', () => {
+    setupApi.status.mockReturnValue(of({ installed: false }));
+    const comp = TestBed.createComponent(LoginComponent).componentInstance;
+    expect(comp.showSetupLink()).toBe(true);
+  });
+
+  it('[US2] masque le lien quand l\'instance est déjà installée', () => {
+    setupApi.status.mockReturnValue(of({ installed: true }));
+    const comp = TestBed.createComponent(LoginComponent).componentInstance;
+    expect(comp.showSetupLink()).toBe(false);
+  });
+
+  it('[US2] masque le lien (défaut sûr) si le statut est indisponible, sans bloquer la connexion', () => {
+    setupApi.status.mockReturnValue(throwError(() => new HttpErrorResponse({ status: 0 })));
+    authApi.login.mockReturnValue(of({ accessToken: 'tok', tokenType: 'Bearer', expiresAt: '' }));
+    const comp = TestBed.createComponent(LoginComponent).componentInstance;
+    expect(comp.showSetupLink()).toBe(false);
+
+    // La connexion reste opérante malgré l'échec du statut.
+    const session = (comp as unknown as { session: { establish: unknown } }).session;
+    vi.spyOn(session as { establish: (t: string) => unknown }, 'establish').mockReturnValue(of({ memberId: 1, displayName: 'X', permissions: [] }));
+    const navSpy = vi.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
+    comp.form.setValue({ reference: 'LUM-9', password: 'Passw0rd' });
+    comp.submit();
     expect(navSpy).toHaveBeenCalledWith('/');
   });
 });

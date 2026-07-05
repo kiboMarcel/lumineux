@@ -3,13 +3,15 @@ import { Component, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { AuthApi } from '../../core/api/auth-api';
+import { SetupApi } from '../../core/api/setup-api';
 import { isPasswordChangeRequired } from '../../core/http/error-messages';
 import { SessionStore } from '../../core/session/session-store';
 
 /**
- * Écran de connexion (feature 008, US1, FR-010). Échec d'identification → message **non révélateur**
- * (indistinct référence inconnue / mot de passe erroné). Une première connexion (403
- * `password_change_required`) bascule vers l'écran d'activation.
+ * Écran de connexion (feature 008/013, FR-010). Échec d'identification → message **non révélateur**.
+ * Une première connexion (403 `password_change_required`) bascule vers l'activation.
+ * Feature 013 : au chargement, consulte le statut d'installation et propose un lien « Première
+ * installation » **uniquement** si l'instance n'est pas initialisée (défaut sûr = masqué).
  */
 @Component({
   selector: 'app-login',
@@ -36,6 +38,9 @@ import { SessionStore } from '../../core/session/session-store';
         </form>
         <div class="lx-links">
           <a routerLink="/auth/forgot-password">Mot de passe oublié ?</a>
+          @if (showSetupLink()) {
+            <a routerLink="/setup/first-admin">Première installation</a>
+          }
         </div>
       </div>
     </div>
@@ -44,17 +49,29 @@ import { SessionStore } from '../../core/session/session-store';
 export class LoginComponent {
   private readonly fb = inject(FormBuilder);
   private readonly authApi = inject(AuthApi);
+  private readonly setupApi = inject(SetupApi);
   private readonly session = inject(SessionStore);
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
 
   readonly loading = signal(false);
   readonly error = signal<string | null>(null);
+  /** Lien « Première installation » : visible uniquement si l'instance n'est pas initialisée. */
+  readonly showSetupLink = signal(false);
 
   readonly form = this.fb.nonNullable.group({
     reference: ['', Validators.required],
     password: ['', Validators.required],
   });
+
+  constructor() {
+    // Statut d'installation (anonyme). Défaut sûr : en cas d'échec, ne PAS afficher le lien et ne
+    // jamais bloquer la connexion (FR-005).
+    this.setupApi.status().subscribe({
+      next: (s) => this.showSetupLink.set(s.installed === false),
+      error: () => this.showSetupLink.set(false),
+    });
+  }
 
   submit(): void {
     if (this.form.invalid) {

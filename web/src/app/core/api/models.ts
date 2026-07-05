@@ -19,6 +19,11 @@ export interface GenericMessage {
   message: string;
 }
 
+/** Statut d'installation de l'instance (feature 012). `installed = true` si un admin actif existe. */
+export interface SetupStatus {
+  installed: boolean;
+}
+
 /** Format d'erreur RFC 7807 renvoyé par l'API (avec extension `code` éventuelle). */
 export interface ProblemDetails {
   type?: string;
