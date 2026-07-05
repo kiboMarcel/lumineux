@@ -1,0 +1,45 @@
+openapi: 3.0.3
+info:
+  title: Lumineux API — Statut d'installation (feature 012)
+  version: "1.0.0"
+  description: >
+    Lecture anonyme de l'état d'installation de l'instance. Sert à la console web pour afficher le
+    lien « Première installation » uniquement quand aucun administrateur actif n'existe.
+
+paths:
+  /api/v1/setup/status:
+    get:
+      tags: [Setup]
+      summary: Indiquer si l'instance est déjà installée
+      description: >
+        Renvoie un indicateur booléen : `installed = true` si et seulement s'il existe au moins un
+        administrateur actif (même règle que le verrou d'installation du premier administrateur).
+        Accès anonyme, lecture seule, aucune donnée sensible.
+      operationId: getSetupStatus
+      security: []   # anonyme
+      responses:
+        "200":
+          description: État d'installation de l'instance.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SetupStatusResponse"
+              examples:
+                nonInstallee:
+                  summary: Instance vierge
+                  value: { installed: false }
+                installee:
+                  summary: Au moins un administrateur actif
+                  value: { installed: true }
+
+components:
+  schemas:
+    SetupStatusResponse:
+      type: object
+      required: [installed]
+      properties:
+        installed:
+          type: boolean
+          description: Vrai si au moins un administrateur actif existe.
+          example: false
+      additionalProperties: false

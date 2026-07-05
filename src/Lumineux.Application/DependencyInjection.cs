@@ -52,6 +52,7 @@ public static class DependencyInjection
         services.AddScoped<ListPermissionsHandler>();
 
         services.AddScoped<InstallFirstAdminHandler>();
+        services.AddScoped<GetSetupStatusHandler>();
 
         return services;
     }

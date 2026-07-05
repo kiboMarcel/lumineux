@@ -11,11 +11,24 @@ namespace Lumineux.Api.Controllers;
 public sealed class SetupController : ControllerBase
 {
     private readonly InstallFirstAdminHandler _installFirstAdmin;
+    private readonly GetSetupStatusHandler _status;
 
-    public SetupController(InstallFirstAdminHandler installFirstAdmin)
+    public SetupController(InstallFirstAdminHandler installFirstAdmin, GetSetupStatusHandler status)
     {
         _installFirstAdmin = installFirstAdmin;
+        _status = status;
     }
+
+    /// <summary>
+    /// Indiquer si l'instance est déjà installée (feature 012). Route anonyme, lecture seule ;
+    /// renvoie un simple booléen (aucune donnée sensible). Sert à la SPA pour afficher le lien
+    /// « Première installation » uniquement sur une instance vierge.
+    /// </summary>
+    [HttpGet("status")]
+    [AllowAnonymous]
+    [ProducesResponseType(typeof(SetupStatusResponse), StatusCodes.Status200OK)]
+    public async Task<ActionResult<SetupStatusResponse>> Status(CancellationToken ct) =>
+        Ok(await _status.HandleAsync(ct));
 
     /// <summary>
     /// Installer le premier administrateur (feature 005, FR-001). Route anonyme unique, autobloquée
