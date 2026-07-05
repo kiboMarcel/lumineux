@@ -1,0 +1,76 @@
+openapi: 3.0.3
+info:
+  title: Lumineux API — Recherche membre allégée (feature 015)
+  version: "1.0.0"
+  description: >
+    Recherche membre minimale, accessible au droit de gestion des présences OU de gestion des membres,
+    pour identifier un membre (ajout manuel de présence). Champs minimaux, terme requis, résultats
+    plafonnés.
+
+paths:
+  /api/v1/members/lookup:
+    get:
+      tags: [Members]
+      summary: Recherche membre allégée (identification)
+      description: >
+        Retourne une liste courte d'entrées minimales (id, référence, nom complet, statut) pour un
+        terme donné (référence et/ou nom). Aucune donnée sensible. Accès réservé aux droits
+        manage_attendance OU manage_members.
+      operationId: lookupMembers
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: query
+          in: query
+          required: true
+          description: Terme de recherche (référence et/ou nom). Requis (non vide).
+          schema: { type: string, minLength: 1 }
+          example: "Doe"
+      responses:
+        "200":
+          description: Correspondances minimales (liste plafonnée).
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/MemberLookupResponse" }
+              example:
+                - { id: 42, reference: "LUM-2026-00042", fullName: "Jane Doe", status: "Active" }
+        "400":
+          description: Terme de recherche manquant / vide.
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/ProblemDetails" }
+        "401":
+          description: Non authentifié.
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/ProblemDetails" }
+        "403":
+          description: Droit manquant (ni gestion des présences ni gestion des membres).
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/ProblemDetails" }
+
+components:
+  securitySchemes:
+    bearerAuth: { type: http, scheme: bearer, bearerFormat: JWT }
+
+  schemas:
+    MemberLookupResponse:
+      type: object
+      required: [id, reference, fullName, status]
+      properties:
+        id: { type: integer, example: 42 }
+        reference: { type: string, example: "LUM-2026-00042" }
+        fullName: { type: string, example: "Jane Doe" }
+        status: { type: string, example: "Active" }
+      additionalProperties: false
+
+    ProblemDetails:
+      type: object
+      properties:
+        title: { type: string }
+        status: { type: integer }
+        detail: { type: string }
+      additionalProperties: true

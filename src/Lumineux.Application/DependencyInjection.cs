@@ -31,6 +31,7 @@ public static class DependencyInjection
         services.AddScoped<SearchMembersHandler>();
         services.AddScoped<GetMemberHandler>();
         services.AddScoped<UpdateMemberHandler>();
+        services.AddScoped<LookupMembersHandler>();
 
         services.AddScoped<LoginHandler>();
         services.AddScoped<ActivateAccountHandler>();

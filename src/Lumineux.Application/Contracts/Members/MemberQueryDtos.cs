@@ -30,3 +30,9 @@ public sealed record MemberListItem(
 
 /// <summary>Résultat paginé de recherche de membres (FR-013).</summary>
 public sealed record MemberListResponse(int Page, int PageSize, int Total, IReadOnlyList<MemberListItem> Items);
+
+/// <summary>
+/// Entrée de recherche membre allégée (feature 015). Champs minimaux d'identification — aucune
+/// coordonnée ni donnée personnelle superflue.
+/// </summary>
+public sealed record MemberLookupResponse(int Id, string Reference, string FullName, string Status);
