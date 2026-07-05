@@ -78,6 +78,25 @@ builder.Services.AddSwaggerGen(options =>
     options.AddSecurityRequirement(new OpenApiSecurityRequirement { [scheme] = Array.Empty<string>() });
 });
 
+// --- CORS (consommation par la SPA Angular, feature 008) ---
+// Origines autorisées lues depuis la configuration (Cors:AllowedOrigins). L'authentification se fait
+// par jeton Bearer (en-tête Authorization) : aucune gestion de cookies/credentials n'est requise, on
+// n'active donc jamais AllowCredentials. Sans origine configurée, aucune requête cross-origin n'est
+// autorisée (comportement sûr par défaut).
+const string spaCorsPolicy = "SpaCors";
+var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>()
+    ?? Array.Empty<string>();
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy(spaCorsPolicy, policy =>
+    {
+        if (allowedOrigins.Length > 0)
+        {
+            policy.WithOrigins(allowedOrigins).AllowAnyHeader().AllowAnyMethod();
+        }
+    });
+});
+
 var app = builder.Build();
 
 app.UseMiddleware<ExceptionHandlingMiddleware>();
@@ -93,6 +112,8 @@ if (app.Environment.IsDevelopment())
     app.UseSwagger();
     app.UseSwaggerUI();
 }
+
+app.UseCors(spaCorsPolicy);
 
 app.UseAuthentication();
 app.UseAuthorization();
