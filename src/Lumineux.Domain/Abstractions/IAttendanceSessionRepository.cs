@@ -13,6 +13,9 @@ public interface IAttendanceSessionRepository
     /// <summary>Indique si l'antenne porte au moins une session encore ouverte (feature 016, FR-005a).</summary>
     Task<bool> HasOpenSessionForAntennaAsync(int antennaId, CancellationToken ct = default);
 
+    /// <summary>Sessions encore ouvertes démarrées par ce membre (feature 023 — reprise de session).</summary>
+    Task<IReadOnlyList<AttendanceSession>> ListOpenByOpenerAsync(int openedByMemberId, CancellationToken ct = default);
+
     Task AddAsync(AttendanceSession session, CancellationToken ct = default);
 
     /// <summary>Liste (suivies) les sessions encore ouvertes dont la date de réunion précède le seuil (clôture auto, FR-024).</summary>

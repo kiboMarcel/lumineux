@@ -15,17 +15,20 @@ public sealed class AttendanceSessionsController : ControllerBase
     private readonly GetSessionHandler _getSession;
     private readonly GetCurrentQrTokenHandler _getQrToken;
     private readonly CloseSessionHandler _closeSession;
+    private readonly ListMyOpenSessionsHandler _myOpenSessions;
 
     public AttendanceSessionsController(
         StartSessionHandler startSession,
         GetSessionHandler getSession,
         GetCurrentQrTokenHandler getQrToken,
-        CloseSessionHandler closeSession)
+        CloseSessionHandler closeSession,
+        ListMyOpenSessionsHandler myOpenSessions)
     {
         _startSession = startSession;
         _getSession = getSession;
         _getQrToken = getQrToken;
         _closeSession = closeSession;
+        _myOpenSessions = myOpenSessions;
     }
 
     /// <summary>Démarre une session de présence (FR-001..003).</summary>
@@ -36,6 +39,13 @@ public sealed class AttendanceSessionsController : ControllerBase
         var session = await _startSession.HandleAsync(request, ct);
         return CreatedAtAction(nameof(Get), new { sessionId = session.Id }, session);
     }
+
+    /// <summary>Récupère les sessions encore ouvertes démarrées par l'utilisateur courant (feature 023, reprise).</summary>
+    [HttpGet("mine/open")]
+    [ProducesResponseType(typeof(IReadOnlyList<SessionResponse>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    public async Task<ActionResult<IReadOnlyList<SessionResponse>>> MyOpenSessions(CancellationToken ct) =>
+        Ok(await _myOpenSessions.HandleAsync(ct));
 
     /// <summary>Consulte une session.</summary>
     [HttpGet("{sessionId:int}")]

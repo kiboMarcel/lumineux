@@ -26,6 +26,12 @@ public sealed class AttendanceSessionRepository : IAttendanceSessionRepository
         _db.AttendanceSessions.AnyAsync(
             x => x.AntennaId == antennaId && x.Status == SessionStatus.Open, ct);
 
+    public async Task<IReadOnlyList<AttendanceSession>> ListOpenByOpenerAsync(int openedByMemberId, CancellationToken ct = default) =>
+        await _db.AttendanceSessions.AsNoTracking()
+            .Where(x => x.Status == SessionStatus.Open && x.OpenedByMemberId == openedByMemberId)
+            .OrderBy(x => x.StartTime)
+            .ToListAsync(ct);
+
     public async Task AddAsync(AttendanceSession session, CancellationToken ct = default) =>
         await _db.AttendanceSessions.AddAsync(session, ct);
 
