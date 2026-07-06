@@ -1,0 +1,12 @@
+{
+  "profiles": {
+    "Lumineux.Api": {
+      "commandName": "Project",
+      "launchBrowser": true,
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development"
+      },
+      "applicationUrl": "https://localhost:4311;http://localhost:4312"
+    }
+  }
+}

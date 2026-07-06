@@ -25,6 +25,9 @@ secrets.json
 coverage/
 *.coverage
 
+# Claude Code (config locale par développeur)
+.claude/settings.local.json
+
 # Universal
 .DS_Store
 Thumbs.db
