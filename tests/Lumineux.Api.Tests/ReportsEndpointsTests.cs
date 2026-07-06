@@ -92,4 +92,33 @@ public sealed class ReportsEndpointsTests : IClassFixture<ApiTestFixture>
 
         response.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
+
+    [Fact]
+    public async Task Time_series_returns_200_with_continuous_points()
+    {
+        var response = await ClientWith(_fixture.IssueBureauToken())
+            .GetAsync($"/api/v1/reports/attendance/time-series?{Range}&granularity=Month");
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        using var doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        doc.RootElement.GetProperty("points").GetArrayLength().Should().BeGreaterThan(0);
+    }
+
+    [Fact]
+    public async Task Time_series_unsupported_granularity_returns_400()
+    {
+        var response = await ClientWith(_fixture.IssueBureauToken())
+            .GetAsync($"/api/v1/reports/attendance/time-series?{Range}&granularity=Day");
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    [Fact]
+    public async Task Time_series_without_manage_attendance_returns_403()
+    {
+        var response = await ClientWith(_fixture.IssueMemberToken())
+            .GetAsync($"/api/v1/reports/attendance/time-series?{Range}&granularity=Month");
+
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+    }
 }

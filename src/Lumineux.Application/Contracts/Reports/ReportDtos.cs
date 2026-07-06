@@ -27,3 +27,24 @@ public sealed record MemberAttendanceRateResponse(
     int ValidAttendanceCount,
     int EligibleSessionCount,
     decimal Rate);
+
+/// <summary>Granularité d'agrégation temporelle (feature 020). « Jour » hors périmètre.</summary>
+public enum TimeSeriesGranularity
+{
+    Week,
+    Month,
+}
+
+/// <summary>Point d'une série temporelle : un intervalle (semaine ISO / mois) et ses décomptes.</summary>
+public sealed record TimeSeriesPoint(
+    DateTime PeriodStart,
+    string Label,
+    int ValidAttendanceCount,
+    int SessionCount);
+
+/// <summary>Série temporelle des présences valides sur une période, par granularité (continue).</summary>
+public sealed record AttendanceTimeSeriesResponse(
+    DateTime From,
+    DateTime To,
+    TimeSeriesGranularity Granularity,
+    IReadOnlyList<TimeSeriesPoint> Points);

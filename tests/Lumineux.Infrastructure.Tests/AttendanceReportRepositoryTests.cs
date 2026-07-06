@@ -92,6 +92,42 @@ public sealed class AttendanceReportRepositoryTests : IDisposable
         (await repo.GetMemberRateDataAsync(999999, Jun1, Jun30)).Should().BeNull();
     }
 
+    [Fact]
+    public async Task Session_valid_counts_one_row_per_session_excluding_cancelled()
+    {
+        var repo = new AttendanceReportRepository(_db);
+
+        var rows = await repo.GetSessionValidCountsAsync(Jun1, Jun30, antennaId: null);
+
+        // 3 sessions en juin (S1, S2, S3) ; total valides = S1(2) + S2(1, M2 annulé exclu) + S3(1) = 4.
+        rows.Should().HaveCount(3);
+        rows.Sum(r => r.ValidAttendanceCount).Should().Be(4);
+        rows.Should().OnlyContain(r => r.MeetingDate >= Jun1 && r.MeetingDate <= Jun30);
+    }
+
+    [Fact]
+    public async Task Session_valid_counts_can_filter_by_antenna()
+    {
+        var repo = new AttendanceReportRepository(_db);
+
+        var rows = await repo.GetSessionValidCountsAsync(Jun1, Jun30, antennaId: _a2);
+
+        rows.Should().ContainSingle().Which.ValidAttendanceCount.Should().Be(1);
+    }
+
+    [Fact]
+    public async Task Time_series_source_is_consistent_with_antenna_summary_total()
+    {
+        // SC-006 : sans filtre d'antenne, la somme des présences valides (source de la série)
+        // égale le total de la synthèse par antenne pour la même période.
+        var repo = new AttendanceReportRepository(_db);
+
+        var seriesTotal = (await repo.GetSessionValidCountsAsync(Jun1, Jun30, null)).Sum(r => r.ValidAttendanceCount);
+        var summaryTotal = (await repo.GetAntennaSummaryAsync(Jun1, Jun30, null)).Sum(r => r.ValidAttendanceCount);
+
+        seriesTotal.Should().Be(summaryTotal);
+    }
+
     private void Seed()
     {
         var a1 = new Antenna { Code = "A1", Label = "Antenne 1", District = 1, Status = "Active" };

@@ -51,6 +51,7 @@ public static class DependencyInjection
         services.AddScoped<Reports.GetAntennaAttendanceSummaryHandler>();
         services.AddScoped<Reports.GetMemberAttendanceRateHandler>();
         services.AddScoped<Reports.ExportAntennaAttendanceCsvHandler>();
+        services.AddScoped<Reports.GetAttendanceTimeSeriesHandler>();
 
         services.AddScoped<CreateBureauProfileHandler>();
         services.AddScoped<UpdateBureauProfileHandler>();

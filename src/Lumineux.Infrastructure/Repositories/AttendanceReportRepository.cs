@@ -103,4 +103,39 @@ public sealed class AttendanceReportRepository : IAttendanceReportRepository
 
         return new MemberRateData(fullName, member.AntennaId, validAttendanceCount, eligibleSessionCount);
     }
+
+    public async Task<IReadOnlyList<SessionValidCount>> GetSessionValidCountsAsync(
+        DateTime from, DateTime to, int? antennaId, CancellationToken ct = default)
+    {
+        var lower = from.Date;
+        var upperExclusive = to.Date.AddDays(1);
+
+        // Sessions de la période (petite volumétrie) : id + date de réunion.
+        var sessions = await _db.AttendanceSessions.AsNoTracking()
+            .Where(s => s.MeetingDate >= lower && s.MeetingDate < upperExclusive
+                        && (antennaId == null || s.AntennaId == antennaId))
+            .Select(s => new { s.Id, s.MeetingDate })
+            .ToListAsync(ct);
+
+        if (sessions.Count == 0)
+        {
+            return Array.Empty<SessionValidCount>();
+        }
+
+        var sessionIds = sessions.Select(s => s.Id).ToList();
+
+        // Présences valides de ces sessions → comptage par session (en mémoire).
+        var validBySession = (await _db.Attendances.AsNoTracking()
+                .Where(a => a.Status == AttendanceStatus.Valid && sessionIds.Contains(a.SessionId))
+                .Select(a => a.SessionId)
+                .ToListAsync(ct))
+            .GroupBy(id => id)
+            .ToDictionary(g => g.Key, g => g.Count());
+
+        return sessions
+            .Select(s => new SessionValidCount(
+                s.MeetingDate,
+                validBySession.TryGetValue(s.Id, out var vc) ? vc : 0))
+            .ToList();
+    }
 }
