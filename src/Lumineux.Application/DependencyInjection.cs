@@ -42,6 +42,12 @@ public static class DependencyInjection
 
         services.AddScoped<Reference.GetReferenceDataHandler>();
 
+        services.AddScoped<Antennas.CreateAntennaHandler>();
+        services.AddScoped<Antennas.GetAntennaHandler>();
+        services.AddScoped<Antennas.UpdateAntennaHandler>();
+        services.AddScoped<Antennas.SetAntennaActiveHandler>();
+        services.AddScoped<Antennas.ListAntennasHandler>();
+
         services.AddScoped<CreateBureauProfileHandler>();
         services.AddScoped<UpdateBureauProfileHandler>();
         services.AddScoped<DeleteBureauProfileHandler>();

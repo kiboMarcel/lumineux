@@ -22,6 +22,10 @@ public sealed class AttendanceSessionRepository : IAttendanceSessionRepository
                  && x.MeetingDate == meetingDate,
             ct);
 
+    public Task<bool> HasOpenSessionForAntennaAsync(int antennaId, CancellationToken ct = default) =>
+        _db.AttendanceSessions.AnyAsync(
+            x => x.AntennaId == antennaId && x.Status == SessionStatus.Open, ct);
+
     public async Task AddAsync(AttendanceSession session, CancellationToken ct = default) =>
         await _db.AttendanceSessions.AddAsync(session, ct);
 

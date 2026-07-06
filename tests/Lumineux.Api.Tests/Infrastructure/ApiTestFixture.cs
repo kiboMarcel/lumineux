@@ -59,6 +59,9 @@ public sealed class ApiTestFixture : WebApplicationFactory<Program>
     /// <summary>Id du membre actif amorcé (utilisé pour les jetons de membre des tests de scan).</summary>
     public int SeededMemberId { get; private set; }
 
+    /// <summary>Id du district amorcé (rattachement d'antenne, feature 016).</summary>
+    public int SeededDistrictId { get; private set; }
+
     private readonly SqliteConnection _connection = new("DataSource=:memory:");
 
     /// <summary>E-mail sender de test capturant les liens de réinitialisation (feature 006).</summary>
@@ -111,9 +114,19 @@ public sealed class ApiTestFixture : WebApplicationFactory<Program>
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             db.Database.EnsureCreated();
 
+            var district = db.Districts.FirstOrDefault();
+            if (district is null)
+            {
+                district = new District { Code = "D1", Label = "District 1", Status = "Active" };
+                db.Districts.Add(district);
+                db.SaveChanges();
+            }
+
+            SeededDistrictId = district.Id;
+
             if (!db.Antennas.Any())
             {
-                db.Antennas.Add(new Antenna { Code = "A1", Label = "Antenne 1", District = 1, Status = "Active" });
+                db.Antennas.Add(new Antenna { Code = "A1", Label = "Antenne 1", District = district.Id, Status = "Active" });
                 db.SaveChanges();
             }
 
@@ -148,6 +161,10 @@ public sealed class ApiTestFixture : WebApplicationFactory<Program>
     /// <summary>Jeton d'un administrateur des profils du bureau (feature 004).</summary>
     public string IssueBureauProfilesAdminToken() =>
         Issue(memberId: 44, "bureau-profils", Lumineux.Application.Abstractions.Permissions.ManageBureauProfiles);
+
+    /// <summary>Jeton d'un gestionnaire des référentiels (feature 016).</summary>
+    public string IssueReferentialsManagerToken() =>
+        Issue(memberId: 45, "bureau-referentiels", Lumineux.Application.Abstractions.Permissions.ManageReferentials);
 
     public string IssueMemberToken()
     {

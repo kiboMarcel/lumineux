@@ -11,4 +11,7 @@ public static class Permissions
 
     /// <summary>Droit de gérer les profils du bureau (feature 004) — écritures et administration.</summary>
     public const string ManageBureauProfiles = "manage_bureau_profiles";
+
+    /// <summary>Droit de gérer les référentiels (feature 016) — gestion des antennes (et à terme autres nomenclatures).</summary>
+    public const string ManageReferentials = "manage_referentials";
 }

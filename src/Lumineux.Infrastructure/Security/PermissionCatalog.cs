@@ -15,6 +15,7 @@ public sealed class PermissionCatalog : IPermissionCatalog
         new(Permissions.ManageAttendance, "Gérer les présences"),
         new(Permissions.ManageMembers, "Gérer les membres"),
         new(Permissions.ManageBureauProfiles, "Gérer les profils du bureau"),
+        new(Permissions.ManageReferentials, "Gérer les référentiels"),
     };
 
     private static readonly HashSet<string> Codes =

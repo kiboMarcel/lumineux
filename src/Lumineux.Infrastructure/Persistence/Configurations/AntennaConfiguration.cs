@@ -15,6 +15,11 @@ public sealed class AntennaConfiguration : IEntityTypeConfiguration<Antenna>
         builder.Property(x => x.District).HasColumnName("district");
         builder.Property(x => x.Status).HasColumnName("status").HasMaxLength(20).IsRequired();
 
+        // Unicité du code d'antenne (feature 016, FR-002) — matérialisée en base (Principe II).
+        builder.HasIndex(x => x.Code).IsUnique();
+
+        builder.Ignore(x => x.IsActive);
+
         AuditColumns.Apply(builder);
     }
 }

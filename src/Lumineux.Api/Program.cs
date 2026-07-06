@@ -58,6 +58,8 @@ builder.Services.AddAuthorization(options =>
         policy.RequireClaim("permission", Permissions.ManageMembers));
     options.AddPolicy(Permissions.ManageBureauProfiles, policy =>
         policy.RequireClaim("permission", Permissions.ManageBureauProfiles));
+    options.AddPolicy(Permissions.ManageReferentials, policy =>
+        policy.RequireClaim("permission", Permissions.ManageReferentials));
 });
 
 builder.Services.AddControllers();

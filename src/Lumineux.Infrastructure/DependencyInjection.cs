@@ -56,6 +56,9 @@ public static class DependencyInjection
         // Feature 010 — données de référence (nomenclatures, lecture seule)
         services.AddScoped<IReferenceDataRepository, ReferenceDataRepository>();
 
+        // Feature 016 — gestion des antennes (référentiels en écriture)
+        services.AddScoped<IAntennaRepository, AntennaRepository>();
+
         // Feature 004 — profils du bureau
         services.AddSingleton<IPermissionCatalog, PermissionCatalog>();
         services.AddScoped<IBureauProfileRepository, BureauProfileRepository>();

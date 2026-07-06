@@ -44,6 +44,7 @@ public sealed class BureauProfilesQueryEndpointsTests : IClassFixture<ApiTestFix
         codes.Should().BeEquivalentTo(new[]
         {
             Permissions.ManageAttendance, Permissions.ManageMembers, Permissions.ManageBureauProfiles,
+            Permissions.ManageReferentials,
         });
     }
 
