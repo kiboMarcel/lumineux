@@ -75,6 +75,27 @@ describe('ReportsDashboardComponent (US1/US2)', () => {
     expect(api.antennaSummary).not.toHaveBeenCalled();
   });
 
+  it('exportPdf déclenche l\'impression du navigateur', () => {
+    const printSpy = vi.spyOn(window, 'print').mockImplementation(() => {});
+    const comp = create();
+
+    comp.exportPdf();
+
+    expect(printSpy).toHaveBeenCalled();
+  });
+
+  it('en-tête d\'impression : libellé d\'antenne appliqué et date de génération', () => {
+    const comp = create();
+    // Sans filtre → « Toutes ».
+    comp.appliedAntennaId.set(null);
+    expect(comp.appliedAntennaLabel()).toBe('Toutes');
+    // Avec une antenne connue → son libellé.
+    comp.antennas.set([{ id: 7, code: 'A7', label: 'Antenne 7' }]);
+    comp.appliedAntennaId.set(7);
+    expect(comp.appliedAntennaLabel()).toBe('Antenne 7');
+    expect(comp.generatedAt).toBeTruthy();
+  });
+
   it('exporte le CSV via un Blob authentifié et déclenche un téléchargement', () => {
     const createObjectURL = vi.fn(() => 'blob:x');
     const revokeObjectURL = vi.fn();

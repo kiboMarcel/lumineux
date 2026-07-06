@@ -16,7 +16,7 @@ import { MemberAttendanceRateResponse } from '../report.models';
   selector: 'app-member-rate',
   imports: [FormsModule],
   template: `
-    <div class="lx-card" style="margin-top:1rem;">
+    <div class="lx-card" style="margin-top:1rem;" [class.lx-print-hide]="!rate()">
       <h2 style="margin-top:0; font-size:1.1rem;">Taux d'assiduité d'un membre</h2>
 
       <form (ngSubmit)="search()" style="display:flex; gap:0.5rem;">

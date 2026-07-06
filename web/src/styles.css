@@ -101,3 +101,27 @@ a { color: var(--lx-primary); }
   .lx-topbar { flex-direction: column; align-items: stretch; }
   .lx-user { justify-content: space-between; }
 }
+
+/* Éléments visibles uniquement à l'impression (en-tête de rapport). */
+.lx-print-only { display: none; }
+
+/* Export PDF des rapports (feature 022) : impression épurée du contenu affiché.
+   On masque uniquement les éléments interactifs (navigation du shell, formulaires, boutons),
+   pas les conteneurs de contenu (cartes, tableaux, SVG). */
+@media print {
+  header.lx-topbar { display: none !important; }   /* barre de navigation du shell */
+  form,
+  .lx-btn { display: none !important; }             /* champs de saisie + boutons */
+  .lx-print-hide { display: none !important; }      /* blocs marqués non imprimables */
+  .lx-print-only { display: block !important; }
+
+  html, body { background: #fff; }
+  .lx-content { max-width: none; padding: 0; }
+  .lx-card {
+    box-shadow: none;
+    border: none;
+    padding: 0.4rem 0;
+    break-inside: avoid;
+  }
+  table, tr, svg { break-inside: avoid; }
+}

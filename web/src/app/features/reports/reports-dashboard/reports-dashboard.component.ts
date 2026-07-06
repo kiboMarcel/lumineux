@@ -23,6 +23,15 @@ import { TimeSeriesChartComponent } from '../time-series-chart/time-series-chart
     <div class="lx-card">
       <h1 class="lx-title" style="margin-top:0;">Rapports de présence</h1>
 
+      <!-- En-tête visible uniquement à l'impression (feature 022). -->
+      <div class="lx-print-only" style="margin-bottom:1rem;">
+        <p class="lx-muted" style="margin:0;">
+          Période : <strong>{{ appliedFrom() }}</strong> → <strong>{{ appliedTo() }}</strong>
+          · Antenne : <strong>{{ appliedAntennaLabel() }}</strong>
+          · Généré le {{ generatedAt }}
+        </p>
+      </div>
+
       <form (ngSubmit)="load()" style="display:flex; flex-wrap:wrap; gap:0.75rem; align-items:flex-end;">
         <label style="display:flex; flex-direction:column; gap:0.25rem;">
           <span>Du</span>
@@ -41,6 +50,7 @@ import { TimeSeriesChartComponent } from '../time-series-chart/time-series-chart
         </label>
         <button type="submit" class="lx-btn" [disabled]="loading()">Afficher</button>
         <button type="button" class="lx-btn lx-btn-ghost" [disabled]="!hasData()" (click)="exportCsv()">Exporter (CSV)</button>
+        <button type="button" class="lx-btn lx-btn-ghost" (click)="exportPdf()">Exporter en PDF</button>
       </form>
 
       @if (error()) { <div class="lx-alert lx-alert-error" role="alert">{{ error() }}</div> }
@@ -115,6 +125,18 @@ export class ReportsDashboardComponent {
   readonly appliedTo = signal<string>('');
   readonly appliedAntennaId = signal<number | null>(null);
 
+  /** Date de génération affichée dans l'en-tête d'impression (feature 022). */
+  readonly generatedAt = new Date().toLocaleDateString('fr-FR');
+
+  /** Libellé de l'antenne appliquée (ou « Toutes ») pour l'en-tête d'impression. */
+  readonly appliedAntennaLabel = computed(() => {
+    const id = this.appliedAntennaId();
+    if (id == null) {
+      return 'Toutes';
+    }
+    return this.antennas().find((a) => a.id === id)?.label ?? `#${id}`;
+  });
+
   readonly hasData = computed(() => (this.summary()?.items.length ?? 0) > 0);
   private readonly maxValid = computed(() =>
     Math.max(1, ...(this.summary()?.items.map((i) => i.validAttendanceCount) ?? [0])),
@@ -157,6 +179,11 @@ export class ReportsDashboardComponent {
       next: (blob) => this.triggerDownload(blob, `presence-antennes_${this.from}_${this.to}.csv`),
       error: (err: HttpErrorResponse) => this.notifier.error(messageForError(err)),
     });
+  }
+
+  /** Export PDF : impression navigateur (l'utilisateur choisit « Enregistrer en PDF »). Feature 022. */
+  exportPdf(): void {
+    window.print();
   }
 
   /** Validation locale de la plage (l'API 018 reste l'autorité). */
