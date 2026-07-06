@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace Lumineux.Application.Contracts.Reports;
 
 /// <summary>Ligne de synthèse d'affluence pour une antenne, sur la période demandée (feature 018, US1).</summary>
@@ -29,6 +31,8 @@ public sealed record MemberAttendanceRateResponse(
     decimal Rate);
 
 /// <summary>Granularité d'agrégation temporelle (feature 020). « Jour » hors périmètre.</summary>
+/// <remarks>Sérialisée en chaîne (« Week »/« Month ») pour un contrat JSON explicite côté clients.</remarks>
+[JsonConverter(typeof(JsonStringEnumConverter))]
 public enum TimeSeriesGranularity
 {
     Week,

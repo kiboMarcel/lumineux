@@ -48,4 +48,15 @@ describe('ReportsApi', () => {
     expect(req.request.params.get('memberId')).toBe('42');
     req.flush({});
   });
+
+  it('timeSeries passe la période, la granularité et le filtre d\'antenne', () => {
+    api.timeSeries('2026-01-01', '2026-06-30', 'Month', 3).subscribe();
+    const req = http.expectOne((r) => r.url === `${BASE}/time-series`);
+    expect(req.request.method).toBe('GET');
+    expect(req.request.params.get('from')).toBe('2026-01-01');
+    expect(req.request.params.get('to')).toBe('2026-06-30');
+    expect(req.request.params.get('granularity')).toBe('Month');
+    expect(req.request.params.get('antennaId')).toBe('3');
+    req.flush({ from: '', to: '', granularity: 'Month', points: [] });
+  });
 });

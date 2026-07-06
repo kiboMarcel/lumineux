@@ -26,3 +26,22 @@ export interface MemberAttendanceRateResponse {
   eligibleSessionCount: number;
   rate: number;
 }
+
+/** Granularité d'agrégation temporelle (feature 020/021). */
+export type TimeSeriesGranularity = 'Week' | 'Month';
+
+/** Point d'une série temporelle : un intervalle (semaine ISO / mois) et ses décomptes. */
+export interface TimeSeriesPoint {
+  periodStart: string;
+  label: string;
+  validAttendanceCount: number;
+  sessionCount: number;
+}
+
+/** Série temporelle des présences valides sur une période, par granularité (continue). */
+export interface AttendanceTimeSeriesResponse {
+  from: string;
+  to: string;
+  granularity: TimeSeriesGranularity;
+  points: TimeSeriesPoint[];
+}

@@ -4,7 +4,9 @@ import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import {
   AntennaAttendanceSummaryResponse,
+  AttendanceTimeSeriesResponse,
   MemberAttendanceRateResponse,
+  TimeSeriesGranularity,
 } from '../../features/reports/report.models';
 
 /**
@@ -44,5 +46,13 @@ export class ReportsApi {
   memberRate(memberId: number, from: string, to: string): Observable<MemberAttendanceRateResponse> {
     const params = new HttpParams().set('memberId', memberId).set('from', from).set('to', to);
     return this.http.get<MemberAttendanceRateResponse>(`${this.base}/member-rate`, { params });
+  }
+
+  /** Série temporelle des présences valides par intervalle (semaine ISO / mois). */
+  timeSeries(
+    from: string, to: string, granularity: TimeSeriesGranularity, antennaId?: number | null,
+  ): Observable<AttendanceTimeSeriesResponse> {
+    let params = this.periodParams(from, to, antennaId).set('granularity', granularity);
+    return this.http.get<AttendanceTimeSeriesResponse>(`${this.base}/time-series`, { params });
   }
 }

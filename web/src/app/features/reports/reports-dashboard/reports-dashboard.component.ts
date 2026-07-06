@@ -8,6 +8,7 @@ import { messageForError } from '../../../core/http/error-messages';
 import { NotificationService } from '../../../shared/notifications/notification.service';
 import { AntennaAttendanceSummaryResponse } from '../report.models';
 import { MemberRateComponent } from '../member-rate/member-rate.component';
+import { TimeSeriesChartComponent } from '../time-series-chart/time-series-chart.component';
 
 /**
  * Tableau de bord des rapports (feature 019, US1/US2). Choix d'une période + filtre d'antenne, synthèse
@@ -17,7 +18,7 @@ import { MemberRateComponent } from '../member-rate/member-rate.component';
  */
 @Component({
   selector: 'app-reports-dashboard',
-  imports: [FormsModule, MemberRateComponent],
+  imports: [FormsModule, MemberRateComponent, TimeSeriesChartComponent],
   template: `
     <div class="lx-card">
       <h1 class="lx-title" style="margin-top:0;">Rapports de présence</h1>
@@ -84,6 +85,10 @@ import { MemberRateComponent } from '../member-rate/member-rate.component';
       }
     </div>
 
+    @if (appliedFrom() && appliedTo()) {
+      <app-time-series-chart [from]="appliedFrom()" [to]="appliedTo()" [antennaId]="appliedAntennaId()" />
+    }
+
     @if (from && to) {
       <app-member-rate [from]="from" [to]="to" />
     }
@@ -103,6 +108,12 @@ export class ReportsDashboardComponent {
   from = firstDayOfMonth();
   to = today();
   antennaId: number | null = null;
+
+  // Contexte « appliqué » (période + antenne validées) fourni au panneau d'évolution (feature 021),
+  // afin qu'il ne se recharge pas à chaque frappe de date mais seulement à la validation.
+  readonly appliedFrom = signal<string>('');
+  readonly appliedTo = signal<string>('');
+  readonly appliedAntennaId = signal<number | null>(null);
 
   readonly hasData = computed(() => (this.summary()?.items.length ?? 0) > 0);
   private readonly maxValid = computed(() =>
@@ -128,6 +139,10 @@ export class ReportsDashboardComponent {
     }
     this.loading.set(true);
     this.error.set(null);
+    // Applique le contexte validé au panneau d'évolution (feature 021).
+    this.appliedFrom.set(this.from);
+    this.appliedTo.set(this.to);
+    this.appliedAntennaId.set(this.antennaId);
     this.api.antennaSummary(this.from, this.to, this.antennaId).subscribe({
       next: (res) => { this.summary.set(res); this.loading.set(false); },
       error: (err: HttpErrorResponse) => { this.error.set(messageForError(err)); this.loading.set(false); },
