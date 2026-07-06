@@ -57,6 +57,7 @@ export class ShellComponent {
     { label: 'Membres', permission: 'manage_members', route: '/members' },
     { label: 'Profils du bureau', route: '/bureau-profiles', anyPermissions: ['manage_bureau_profiles', 'manage_members'] },
     { label: 'Présences', permission: 'manage_attendance', route: '/attendance' },
+    { label: 'Antennes', permission: 'manage_referentials', route: '/antennas' },
   ];
 
   /** Modules visibles selon les droits de la session (RBAC d'affichage ; l'API reste l'autorité). */

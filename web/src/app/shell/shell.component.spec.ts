@@ -48,4 +48,11 @@ describe('ShellComponent — navigation RBAC (SC-003)', () => {
     const presences = comp.visibleModules().find((m) => m.label === 'Présences');
     expect(presences?.route).toBe('/attendance');
   });
+
+  it('affiche « Antennes » comme lien réel pour le droit manage_referentials (feature 017)', () => {
+    authenticate(['manage_referentials']);
+    const comp = TestBed.createComponent(ShellComponent).componentInstance;
+    const antennes = comp.visibleModules().find((m) => m.label === 'Antennes');
+    expect(antennes?.route).toBe('/antennas');
+  });
 });

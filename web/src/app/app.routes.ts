@@ -16,6 +16,8 @@ import { ResetPasswordComponent } from './features/reset-password/reset-password
 import { SetupComponent } from './features/setup/setup.component';
 import { SessionStartComponent } from './features/attendance/session-start/session-start.component';
 import { SessionRunComponent } from './features/attendance/session-run/session-run.component';
+import { AntennaListComponent } from './features/antennas/antenna-list/antenna-list.component';
+import { AntennaFormComponent } from './features/antennas/antenna-form/antenna-form.component';
 import { ShellComponent } from './shell/shell.component';
 
 const manageMembers = { permission: 'manage_members' };
@@ -23,6 +25,7 @@ const manageBureauProfiles = { permission: 'manage_bureau_profiles' };
 // Lecture élargie (feature 011) : administration des profils OU gestion des membres.
 const profilesReadAccess = { anyPermissions: ['manage_bureau_profiles', 'manage_members'] };
 const manageAttendance = { permission: 'manage_attendance' };
+const manageReferentials = { permission: 'manage_referentials' };
 
 export const routes: Routes = [
   // Routes publiques
@@ -59,6 +62,11 @@ export const routes: Routes = [
       // Module Présences (feature 014) — droit manage_attendance requis
       { path: 'attendance', component: SessionStartComponent, canActivate: [permissionGuard], data: manageAttendance },
       { path: 'attendance/sessions/:id', component: SessionRunComponent, canActivate: [permissionGuard], data: manageAttendance },
+
+      // Module Antennes (feature 017) — droit manage_referentials requis
+      { path: 'antennas', component: AntennaListComponent, canActivate: [permissionGuard], data: manageReferentials },
+      { path: 'antennas/new', component: AntennaFormComponent, canActivate: [permissionGuard], data: manageReferentials },
+      { path: 'antennas/:id/edit', component: AntennaFormComponent, canActivate: [permissionGuard], data: manageReferentials },
     ],
   },
 
