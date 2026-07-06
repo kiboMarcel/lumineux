@@ -1,5 +1,6 @@
 using Lumineux.Application.Abstractions;
 using Lumineux.Domain.Abstractions;
+using Lumineux.Domain.Entities;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -70,7 +71,7 @@ public sealed class SessionAutoCloseService : BackgroundService
 
         foreach (var session in expired)
         {
-            var endTime = session.MeetingDate.AddHours(options.DefaultDurationHours);
+            var endTime = ComputeAutoCloseEndTime(session, options, now);
             session.AutoClose(endTime);
 
             foreach (var attendance in await attendances.GetValidBySessionForUpdateAsync(session.Id, ct))
@@ -86,5 +87,16 @@ public sealed class SessionAutoCloseService : BackgroundService
             await sessions.SaveChangesAsync(ct);
             _logger.LogInformation("Clôture automatique de {Count} session(s)", expired.Count);
         }
+    }
+
+    /// <summary>
+    /// Heure de fin par défaut d'une clôture automatique (FR-024) : durée nominale à partir du
+    /// <b>démarrage réel</b> (jamais de <c>MeetingDate</c> qui n'est qu'une date), bornée à l'instant
+    /// de clôture. Garantit <c>StartTime &lt; endTime &lt;= now</c> (donnée véridique et cohérente).
+    /// </summary>
+    public static DateTime ComputeAutoCloseEndTime(AttendanceSession session, AutoCloseOptions options, DateTime nowUtc)
+    {
+        var endTime = session.StartTime.AddHours(options.DefaultDurationHours);
+        return endTime > nowUtc ? nowUtc : endTime;
     }
 }

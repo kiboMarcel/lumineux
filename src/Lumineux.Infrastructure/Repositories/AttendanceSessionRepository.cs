@@ -25,9 +25,11 @@ public sealed class AttendanceSessionRepository : IAttendanceSessionRepository
     public async Task AddAsync(AttendanceSession session, CancellationToken ct = default) =>
         await _db.AttendanceSessions.AddAsync(session, ct);
 
-    public async Task<IReadOnlyList<AttendanceSession>> ListOpenBeforeAsync(DateTime meetingDateThreshold, CancellationToken ct = default) =>
+    public async Task<IReadOnlyList<AttendanceSession>> ListOpenBeforeAsync(DateTime startedBeforeUtc, CancellationToken ct = default) =>
         await _db.AttendanceSessions
-            .Where(x => x.Status == SessionStatus.Open && x.MeetingDate < meetingDateThreshold)
+            // Expiration mesurée sur la durée d'ouverture réelle (StartTime), et non sur MeetingDate
+            // qui n'est qu'une date (minuit) — sinon toute session de journée serait jugée expirée.
+            .Where(x => x.Status == SessionStatus.Open && x.StartTime < startedBeforeUtc)
             .ToListAsync(ct);
 
     public Task SaveChangesAsync(CancellationToken ct = default) => _db.SaveChangesAsync(ct);

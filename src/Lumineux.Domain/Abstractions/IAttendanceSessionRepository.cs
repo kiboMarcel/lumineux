@@ -13,7 +13,7 @@ public interface IAttendanceSessionRepository
     Task AddAsync(AttendanceSession session, CancellationToken ct = default);
 
     /// <summary>Liste (suivies) les sessions encore ouvertes dont la date de réunion précède le seuil (clôture auto, FR-024).</summary>
-    Task<IReadOnlyList<AttendanceSession>> ListOpenBeforeAsync(DateTime meetingDateThreshold, CancellationToken ct = default);
+    Task<IReadOnlyList<AttendanceSession>> ListOpenBeforeAsync(DateTime startedBeforeUtc, CancellationToken ct = default);
 
     Task SaveChangesAsync(CancellationToken ct = default);
 }
