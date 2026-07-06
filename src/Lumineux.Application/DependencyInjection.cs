@@ -48,6 +48,10 @@ public static class DependencyInjection
         services.AddScoped<Antennas.SetAntennaActiveHandler>();
         services.AddScoped<Antennas.ListAntennasHandler>();
 
+        services.AddScoped<Reports.GetAntennaAttendanceSummaryHandler>();
+        services.AddScoped<Reports.GetMemberAttendanceRateHandler>();
+        services.AddScoped<Reports.ExportAntennaAttendanceCsvHandler>();
+
         services.AddScoped<CreateBureauProfileHandler>();
         services.AddScoped<UpdateBureauProfileHandler>();
         services.AddScoped<DeleteBureauProfileHandler>();

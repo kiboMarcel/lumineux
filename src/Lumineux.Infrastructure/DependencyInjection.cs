@@ -59,6 +59,9 @@ public static class DependencyInjection
         // Feature 016 — gestion des antennes (référentiels en écriture)
         services.AddScoped<IAntennaRepository, AntennaRepository>();
 
+        // Feature 018 — rapports & statistiques de présence (agrégations, lecture seule)
+        services.AddScoped<IAttendanceReportRepository, AttendanceReportRepository>();
+
         // Feature 004 — profils du bureau
         services.AddSingleton<IPermissionCatalog, PermissionCatalog>();
         services.AddScoped<IBureauProfileRepository, BureauProfileRepository>();
