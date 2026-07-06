@@ -55,4 +55,12 @@ describe('ShellComponent — navigation RBAC (SC-003)', () => {
     const antennes = comp.visibleModules().find((m) => m.label === 'Antennes');
     expect(antennes?.route).toBe('/antennas');
   });
+
+  it('affiche « Présences » et « Rapports » pour le droit manage_attendance (feature 019)', () => {
+    authenticate(['manage_attendance']);
+    const comp = TestBed.createComponent(ShellComponent).componentInstance;
+    const labels = comp.visibleModules().map((m) => m.label);
+    expect(labels).toContain('Rapports');
+    expect(comp.visibleModules().find((m) => m.label === 'Rapports')?.route).toBe('/reports');
+  });
 });

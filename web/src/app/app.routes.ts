@@ -18,6 +18,7 @@ import { SessionStartComponent } from './features/attendance/session-start/sessi
 import { SessionRunComponent } from './features/attendance/session-run/session-run.component';
 import { AntennaListComponent } from './features/antennas/antenna-list/antenna-list.component';
 import { AntennaFormComponent } from './features/antennas/antenna-form/antenna-form.component';
+import { ReportsDashboardComponent } from './features/reports/reports-dashboard/reports-dashboard.component';
 import { ShellComponent } from './shell/shell.component';
 
 const manageMembers = { permission: 'manage_members' };
@@ -67,6 +68,9 @@ export const routes: Routes = [
       { path: 'antennas', component: AntennaListComponent, canActivate: [permissionGuard], data: manageReferentials },
       { path: 'antennas/new', component: AntennaFormComponent, canActivate: [permissionGuard], data: manageReferentials },
       { path: 'antennas/:id/edit', component: AntennaFormComponent, canActivate: [permissionGuard], data: manageReferentials },
+
+      // Module Rapports (feature 019) — droit manage_attendance requis
+      { path: 'reports', component: ReportsDashboardComponent, canActivate: [permissionGuard], data: manageAttendance },
     ],
   },
 
