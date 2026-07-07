@@ -34,4 +34,9 @@ describe('AttendanceSessionsApi', () => {
     api.close(7).subscribe();
     http.expectOne({ url: `${BASE}/7/close`, method: 'POST' }).flush({});
   });
+
+  it('myOpenSessions cible mine/open (GET)', () => {
+    api.myOpenSessions().subscribe();
+    http.expectOne({ url: `${BASE}/mine/open`, method: 'GET' }).flush([]);
+  });
 });

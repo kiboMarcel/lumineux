@@ -6,11 +6,14 @@ import { ReferenceApi } from '../../../core/api/reference-api';
 import { ReferenceItem } from '../../../core/api/reference.models';
 import { AttendanceSessionsApi } from '../../../core/api/attendance-sessions-api';
 import { messageForError } from '../../../core/http/error-messages';
+import { SessionResponse } from '../attendance.models';
 
 /**
- * Écran de **démarrage** d'une session de présence (feature 014, US1). Sélection d'une antenne
- * (référentiel 010), d'une date de réunion et d'un pas de rotation du QR optionnel, puis navigation
- * vers l'écran d'animation. Si aucune antenne n'est disponible, le démarrage est **empêché** (FR-002).
+ * Écran de **démarrage** d'une session de présence (feature 014, US1) + **reprise** d'une session en
+ * cours (feature 024). Au chargement, récupère les sessions ouvertes de l'utilisateur (API 023) et
+ * propose de les **reprendre** ; en cas de **conflit** au démarrage (409), propose la reprise de la
+ * session correspondante. La liste des sessions ouvertes provient de l'API — aucun filtrage métier
+ * côté client. La vérification est **non bloquante** pour le formulaire de démarrage.
  */
 @Component({
   selector: 'app-session-start',
@@ -18,6 +21,21 @@ import { messageForError } from '../../../core/http/error-messages';
   template: `
     <div class="lx-card">
       <h1 class="lx-title" style="margin-top:0;">Démarrer une session de présence</h1>
+
+      <!-- Reprise d'une session en cours (feature 024). -->
+      @if (openSessions().length > 0) {
+        <div class="lx-alert lx-alert-info" role="status">
+          <p style="margin:0 0 0.5rem;"><strong>Vous avez une session en cours.</strong></p>
+          <ul style="list-style:none; padding:0; margin:0;">
+            @for (s of openSessions(); track s.id) {
+              <li style="display:flex; justify-content:space-between; align-items:center; gap:0.75rem; padding:0.35rem 0;">
+                <span>{{ antennaLabel(s.antennaId) }} — {{ dayOf(s.meetingDate) }} (démarrée à {{ timeOf(s.startTime) }})</span>
+                <button type="button" class="lx-btn lx-btn-ghost" (click)="resume(s)">Reprendre</button>
+              </li>
+            }
+          </ul>
+        </div>
+      }
 
       @if (loadingRefs()) {
         <p class="lx-muted">Chargement des antennes…</p>
@@ -49,7 +67,13 @@ import { messageForError } from '../../../core/http/error-messages';
                    style="padding:0.5rem; border:1px solid var(--lx-border); border-radius:8px;" />
           </label>
 
-          @if (error()) {
+          <!-- Conflit au démarrage → proposer la reprise (feature 024, US2). -->
+          @if (conflictResume(); as c) {
+            <div class="lx-alert lx-alert-info" role="alert">
+              <p style="margin:0 0 0.5rem;">Une session est déjà ouverte pour cette antenne à ce créneau.</p>
+              <button type="button" class="lx-btn" (click)="resume(c)">Reprendre la session en cours</button>
+            </div>
+          } @else if (error()) {
             <p class="lx-error">{{ error() }}</p>
           }
 
@@ -72,6 +96,10 @@ export class SessionStartComponent {
   readonly submitting = signal(false);
   readonly error = signal<string | null>(null);
 
+  /** Sessions ouvertes de l'utilisateur (feature 023) + reprise sur conflit (feature 024). */
+  readonly openSessions = signal<SessionResponse[]>([]);
+  readonly conflictResume = signal<SessionResponse | null>(null);
+
   antennaId: number | null = null;
   meetingDate = '';
   qrStepSeconds: number | null = null;
@@ -87,6 +115,29 @@ export class SessionStartComponent {
         this.loadingRefs.set(false);
       },
     });
+
+    // Vérification NON bloquante des sessions ouvertes de l'utilisateur (pour la reprise).
+    this.sessionsApi.myOpenSessions().subscribe({
+      next: (sessions) => this.openSessions.set(sessions),
+      error: () => { /* silencieux : ne bloque pas le démarrage d'une nouvelle session */ },
+    });
+  }
+
+  /** Libellé d'antenne (référentiel 010) — présentation seule. */
+  antennaLabel(id: number): string {
+    return this.antennas().find((a) => a.id === id)?.label ?? `#${id}`;
+  }
+
+  dayOf(meetingDate: string): string {
+    return meetingDate.slice(0, 10);
+  }
+
+  timeOf(startTime: string): string {
+    return startTime.length >= 16 ? startTime.slice(11, 16) : startTime;
+  }
+
+  resume(session: SessionResponse): void {
+    void this.router.navigate(['/attendance/sessions', session.id]);
   }
 
   start(): void {
@@ -95,6 +146,7 @@ export class SessionStartComponent {
     }
     this.submitting.set(true);
     this.error.set(null);
+    this.conflictResume.set(null);
     this.sessionsApi
       .start({
         antennaId: this.antennaId,
@@ -106,9 +158,35 @@ export class SessionStartComponent {
           void this.router.navigate(['/attendance/sessions', session.id]);
         },
         error: (err: HttpErrorResponse) => {
-          this.error.set(messageForError(err));
-          this.submitting.set(false);
+          if (err.status === 409) {
+            this.handleStartConflict(err);
+          } else {
+            this.error.set(messageForError(err));
+            this.submitting.set(false);
+          }
         },
       });
+  }
+
+  /** Conflit au démarrage : retrouver ma session ouverte pour l'antenne + date choisies (feature 024). */
+  private handleStartConflict(err: HttpErrorResponse): void {
+    this.sessionsApi.myOpenSessions().subscribe({
+      next: (sessions) => {
+        this.openSessions.set(sessions);
+        const match = sessions.find(
+          (s) => s.antennaId === this.antennaId && this.dayOf(s.meetingDate) === this.meetingDate,
+        );
+        this.submitting.set(false);
+        if (match) {
+          this.conflictResume.set(match);
+        } else {
+          this.error.set(messageForError(err));
+        }
+      },
+      error: () => {
+        this.submitting.set(false);
+        this.error.set(messageForError(err));
+      },
+    });
   }
 }

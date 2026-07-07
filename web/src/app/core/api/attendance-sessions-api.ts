@@ -17,6 +17,11 @@ export class AttendanceSessionsApi {
     return this.http.post<SessionResponse>(this.base, body);
   }
 
+  /** Sessions encore ouvertes démarrées par l'utilisateur courant (feature 023) — pour la reprise. */
+  myOpenSessions(): Observable<SessionResponse[]> {
+    return this.http.get<SessionResponse[]>(`${this.base}/mine/open`);
+  }
+
   get(sessionId: number): Observable<SessionResponse> {
     return this.http.get<SessionResponse>(`${this.base}/${sessionId}`);
   }
