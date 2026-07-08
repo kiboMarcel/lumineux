@@ -1,0 +1,41 @@
+name: lumineux_mobile
+description: "Application mobile membre Lumineux"
+publish_to: 'none'
+
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.12.2
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+
+  cupertino_icons: ^1.0.8
+
+  # État applicatif & injection de dépendances (SessionController, providers).
+  flutter_riverpod: ^2.6.1
+  # Navigation déclarative + redirection de session (garde).
+  go_router: ^14.6.2
+  # Client HTTP + intercepteurs (Bearer, erreurs).
+  dio: ^5.7.0
+  # Coffre sécurisé du jeton (Keychain iOS / Keystore Android).
+  flutter_secure_storage: ^9.2.2
+  # Localisation FR.
+  intl: ^0.20.2
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  # Tests d'intégration de bout en bout.
+  integration_test:
+    sdk: flutter
+  # Doubles de test (mocks).
+  mocktail: ^1.0.4
+
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true

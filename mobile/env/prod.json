@@ -1,0 +1,4 @@
+{
+  "API_BASE_URL": "https://api.lumineux.example",
+  "IS_DEV": false
+}
