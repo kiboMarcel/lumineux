@@ -5,7 +5,9 @@ publish_to: 'none'
 version: 1.0.0+1
 
 environment:
-  sdk: ^3.12.2
+  # Aligné sur le plan (Dart >= 3.7) plutôt que sur le Dart embarqué de Flutter,
+  # pour rester compatible avec un SDK Dart autonome plus ancien.
+  sdk: ">=3.7.0 <4.0.0"
 
 dependencies:
   flutter:
