@@ -4,12 +4,14 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/errors/error_messages.dart';
 import '../../../core/network/api_exception.dart';
+import '../../../core/theme/app_colors.dart';
+import '../../../core/widgets/lum_buttons.dart';
+import '../../../core/widgets/lum_field.dart';
 import '../../../routing/app_router.dart';
 import '../application/providers.dart';
 import '../data/auth_dtos.dart';
 
-/// US3 — Mot de passe oublié. Message **générique** (anti-énumération)
-/// quel que soit le résultat.
+/// US3 — Mot de passe oublié (design Lumineux Mobile). Message générique.
 class ForgotPasswordScreen extends ConsumerStatefulWidget {
   const ForgotPasswordScreen({super.key});
 
@@ -56,28 +58,34 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Mot de passe oublié')),
+      appBar: AppBar(
+        leading: IconButton(
+          key: const Key('forgot-back'),
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => context.go(Routes.login),
+        ),
+        title: const Text('Mot de passe oublié'),
+      ),
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
+          padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
           child: Form(
             key: _formKey,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Text(
-                  'Saisissez votre référence pour recevoir un lien de réinitialisation.',
-                  style: Theme.of(context).textTheme.bodyMedium,
+                const Text(
+                  'Saisissez votre référence pour recevoir un lien de '
+                  'réinitialisation.',
+                  style: TextStyle(
+                      fontSize: 14, color: AppColors.ink2, height: 1.5),
                 ),
                 const SizedBox(height: 16),
-                TextFormField(
-                  key: const Key('forgot-reference'),
+                LumField(
+                  label: 'Référence',
+                  fieldKey: const Key('forgot-reference'),
                   controller: _reference,
                   enabled: !_submitting,
-                  decoration: const InputDecoration(
-                    labelText: 'Référence',
-                    border: OutlineInputBorder(),
-                  ),
                   validator: (v) => (v == null || v.trim().isEmpty)
                       ? 'Référence requise'
                       : null,
@@ -87,8 +95,8 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
                   Text(
                     _message!,
                     key: const Key('forgot-message'),
-                    style: TextStyle(
-                        color: Theme.of(context).colorScheme.primary),
+                    style: const TextStyle(
+                        color: AppColors.primary, fontSize: 14),
                   ),
                 ],
                 if (_error != null) ...[
@@ -96,33 +104,28 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
                   Text(
                     _error!,
                     key: const Key('forgot-error'),
-                    style: TextStyle(color: Theme.of(context).colorScheme.error),
+                    style:
+                        const TextStyle(color: AppColors.danger, fontSize: 13),
                   ),
                 ],
-                const SizedBox(height: 24),
-                FilledButton(
+                const SizedBox(height: 20),
+                LumPrimaryButton(
                   key: const Key('forgot-submit'),
-                  onPressed: _submitting ? null : _submit,
-                  child: _submitting
-                      ? const SizedBox(
-                          height: 20,
-                          width: 20,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Text('Envoyer'),
+                  label: 'Envoyer',
+                  loading: _submitting,
+                  onPressed: _submit,
                 ),
-                const SizedBox(height: 8),
-                TextButton(
-                  key: const Key('forgot-to-reset'),
-                  onPressed:
-                      _submitting ? null : () => context.go(Routes.reset),
-                  child: const Text('J\'ai déjà un jeton de réinitialisation'),
-                ),
-                TextButton(
-                  key: const Key('forgot-to-login'),
-                  onPressed:
-                      _submitting ? null : () => context.go(Routes.login),
-                  child: const Text('Retour à la connexion'),
+                const SizedBox(height: 10),
+                Center(
+                  child: TextButton(
+                    key: const Key('forgot-to-reset'),
+                    onPressed:
+                        _submitting ? null : () => context.go(Routes.reset),
+                    child: const Text(
+                      'J\'ai déjà un jeton de réinitialisation',
+                      style: TextStyle(color: AppColors.primary, fontSize: 13),
+                    ),
+                  ),
                 ),
               ],
             ),

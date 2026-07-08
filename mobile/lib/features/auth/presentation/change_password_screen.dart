@@ -4,12 +4,15 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/errors/error_messages.dart';
 import '../../../core/network/api_exception.dart';
+import '../../../core/theme/app_colors.dart';
+import '../../../core/widgets/lum_buttons.dart';
+import '../../../core/widgets/lum_field.dart';
 import '../../../routing/app_router.dart';
 import '../application/password_policy.dart';
 import '../application/providers.dart';
 import '../data/auth_dtos.dart';
 
-/// US4 — Changement de mot de passe (membre authentifié).
+/// US4 — Changement de mot de passe (design Lumineux Mobile).
 class ChangePasswordScreen extends ConsumerStatefulWidget {
   const ChangePasswordScreen({super.key});
 
@@ -64,44 +67,38 @@ class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Changer le mot de passe'),
         leading: IconButton(
           key: const Key('change-back'),
           icon: const Icon(Icons.arrow_back),
           onPressed: () => context.go(Routes.home),
         ),
+        title: const Text('Changer le mot de passe'),
       ),
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
+          padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
           child: Form(
             key: _formKey,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                TextFormField(
-                  key: const Key('change-current'),
+                LumField(
+                  label: 'Mot de passe actuel',
+                  fieldKey: const Key('change-current'),
                   controller: _current,
                   enabled: !_submitting,
                   obscureText: true,
-                  decoration: const InputDecoration(
-                    labelText: 'Mot de passe actuel',
-                    border: OutlineInputBorder(),
-                  ),
                   validator: (v) => (v == null || v.isEmpty)
                       ? 'Mot de passe actuel requis'
                       : null,
                 ),
                 const SizedBox(height: 16),
-                TextFormField(
-                  key: const Key('change-new-password'),
+                LumField(
+                  label: 'Nouveau mot de passe',
+                  fieldKey: const Key('change-new-password'),
                   controller: _newPassword,
                   enabled: !_submitting,
                   obscureText: true,
-                  decoration: const InputDecoration(
-                    labelText: 'Nouveau mot de passe',
-                    border: OutlineInputBorder(),
-                  ),
                   validator: (v) => PasswordPolicy.validate(v ?? ''),
                 ),
                 if (_error != null) ...[
@@ -109,20 +106,16 @@ class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
                   Text(
                     _error!,
                     key: const Key('change-error'),
-                    style: TextStyle(color: Theme.of(context).colorScheme.error),
+                    style:
+                        const TextStyle(color: AppColors.danger, fontSize: 13),
                   ),
                 ],
-                const SizedBox(height: 24),
-                FilledButton(
+                const SizedBox(height: 20),
+                LumPrimaryButton(
                   key: const Key('change-submit'),
-                  onPressed: _submitting ? null : _submit,
-                  child: _submitting
-                      ? const SizedBox(
-                          height: 20,
-                          width: 20,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Text('Enregistrer'),
+                  label: 'Enregistrer',
+                  loading: _submitting,
+                  onPressed: _submit,
                 ),
               ],
             ),

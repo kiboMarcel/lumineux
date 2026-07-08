@@ -41,3 +41,9 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+
+  fonts:
+    - family: Manrope
+      fonts:
+        # Police variable (axe wght) — couvre les graisses 400 à 800.
+        - asset: assets/fonts/Manrope-Variable.ttf

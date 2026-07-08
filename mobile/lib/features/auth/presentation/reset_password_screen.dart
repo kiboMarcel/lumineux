@@ -4,12 +4,15 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/errors/error_messages.dart';
 import '../../../core/network/api_exception.dart';
+import '../../../core/theme/app_colors.dart';
+import '../../../core/widgets/lum_buttons.dart';
+import '../../../core/widgets/lum_field.dart';
 import '../../../routing/app_router.dart';
 import '../application/password_policy.dart';
 import '../application/providers.dart';
 import '../data/auth_dtos.dart';
 
-/// US3 — Réinitialisation via le jeton reçu par e-mail (saisie/collage).
+/// US3 — Réinitialisation via le jeton reçu par e-mail (design Lumineux Mobile).
 class ResetPasswordScreen extends ConsumerStatefulWidget {
   const ResetPasswordScreen({super.key});
 
@@ -61,10 +64,17 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Réinitialisation')),
+      appBar: AppBar(
+        leading: IconButton(
+          key: const Key('reset-back'),
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => context.go(Routes.login),
+        ),
+        title: const Text('Réinitialisation'),
+      ),
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
+          padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
           child: _done ? _buildSuccess(context) : _buildForm(context),
         ),
       ),
@@ -75,16 +85,17 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text(
+        const Text(
           'Votre mot de passe a été réinitialisé.',
-          key: const Key('reset-success'),
-          style: Theme.of(context).textTheme.titleMedium,
+          key: Key('reset-success'),
+          style: TextStyle(
+              fontSize: 16, fontWeight: FontWeight.w700, color: AppColors.ink),
         ),
-        const SizedBox(height: 24),
-        FilledButton(
+        const SizedBox(height: 20),
+        LumPrimaryButton(
           key: const Key('reset-to-login'),
+          label: 'Se connecter',
           onPressed: () => context.go(Routes.login),
-          child: const Text('Se connecter'),
         ),
       ],
     );
@@ -96,32 +107,27 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text(
-            'Collez le jeton reçu par e-mail puis choisissez un nouveau mot de passe.',
-            style: Theme.of(context).textTheme.bodyMedium,
+          const Text(
+            'Collez le jeton reçu par e-mail puis choisissez un nouveau mot de '
+            'passe.',
+            style: TextStyle(fontSize: 14, color: AppColors.ink2, height: 1.5),
           ),
           const SizedBox(height: 16),
-          TextFormField(
-            key: const Key('reset-token'),
+          LumField(
+            label: 'Jeton de réinitialisation',
+            fieldKey: const Key('reset-token'),
             controller: _token,
             enabled: !_submitting,
-            decoration: const InputDecoration(
-              labelText: 'Jeton de réinitialisation',
-              border: OutlineInputBorder(),
-            ),
             validator: (v) =>
                 (v == null || v.trim().isEmpty) ? 'Jeton requis' : null,
           ),
           const SizedBox(height: 16),
-          TextFormField(
-            key: const Key('reset-new-password'),
+          LumField(
+            label: 'Nouveau mot de passe',
+            fieldKey: const Key('reset-new-password'),
             controller: _newPassword,
             enabled: !_submitting,
             obscureText: true,
-            decoration: const InputDecoration(
-              labelText: 'Nouveau mot de passe',
-              border: OutlineInputBorder(),
-            ),
             validator: (v) => PasswordPolicy.validate(v ?? ''),
           ),
           if (_error != null) ...[
@@ -129,20 +135,15 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
             Text(
               _error!,
               key: const Key('reset-error'),
-              style: TextStyle(color: Theme.of(context).colorScheme.error),
+              style: const TextStyle(color: AppColors.danger, fontSize: 13),
             ),
           ],
-          const SizedBox(height: 24),
-          FilledButton(
+          const SizedBox(height: 20),
+          LumPrimaryButton(
             key: const Key('reset-submit'),
-            onPressed: _submitting ? null : _submit,
-            child: _submitting
-                ? const SizedBox(
-                    height: 20,
-                    width: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : const Text('Réinitialiser'),
+            label: 'Réinitialiser',
+            loading: _submitting,
+            onPressed: _submit,
           ),
         ],
       ),

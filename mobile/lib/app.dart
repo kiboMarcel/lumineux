@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'core/theme/app_theme.dart';
 import 'features/auth/application/providers.dart';
 import 'routing/app_router.dart';
 
@@ -45,12 +46,7 @@ class _LumineuxAppState extends ConsumerState<LumineuxApp>
     return MaterialApp.router(
       title: 'Lumineux',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        colorSchemeSeed: const Color(0xFF1565C0),
-        useMaterial3: true,
-        // Cibles tactiles suffisantes pour un usage mobile.
-        materialTapTargetSize: MaterialTapTargetSize.padded,
-      ),
+      theme: AppTheme.light(),
       locale: const Locale('fr'),
       supportedLocales: const [Locale('fr')],
       localizationsDelegates: const [

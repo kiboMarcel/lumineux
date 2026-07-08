@@ -5,7 +5,7 @@ import 'package:lumineux_mobile/core/network/token_holder.dart';
 import 'package:lumineux_mobile/features/auth/application/providers.dart';
 import 'package:lumineux_mobile/features/auth/application/session_state.dart';
 import 'package:lumineux_mobile/features/auth/data/auth_dtos.dart';
-import 'package:lumineux_mobile/features/home/presentation/home_screen.dart';
+import 'package:lumineux_mobile/features/home/presentation/home_shell.dart';
 import 'package:mocktail/mocktail.dart';
 
 import '../../support/harness.dart';
@@ -14,10 +14,10 @@ void main() {
   setUpAll(registerAuthFallbacks);
 
   Future<UncontrolledProviderScope> authenticatedApp(
-    WidgetTester tester,
     MockAuthApi api,
-    MockTokenStore store,
-  ) async {
+    MockTokenStore store, {
+    List<String> permissions = const [],
+  }) async {
     final holder = TokenHolder();
     when(() => store.clear()).thenAnswer((_) async {});
     when(() => store.save(any())).thenAnswer((_) async {});
@@ -26,8 +26,8 @@ void main() {
           tokenType: 'Bearer',
           expiresAt: DateTime.now().add(const Duration(hours: 1)),
         ));
-    when(() => api.me()).thenAnswer((_) async => const CurrentUser(
-        memberId: '1', displayName: 'Jean Dupont', permissions: []));
+    when(() => api.me()).thenAnswer((_) async => CurrentUser(
+        memberId: '1', displayName: 'Jean Dupont', permissions: permissions));
 
     final container = makeContainer(api: api, store: store, holder: holder);
     await container
@@ -36,27 +36,29 @@ void main() {
 
     return UncontrolledProviderScope(
       container: container,
-      child: routerApp(const HomeScreen()),
+      child: routerApp(const HomeShell()),
     );
   }
 
-  testWidgets('affiche l\'identité du membre', (tester) async {
-    final api = MockAuthApi();
-    final store = MockTokenStore();
-    await tester.pumpWidget(await authenticatedApp(tester, api, store));
-    await tester.pump();
-
-    expect(find.text('Jean Dupont'), findsOneWidget);
-  });
-
-  testWidgets('déconnexion → session anonyme', (tester) async {
-    final api = MockAuthApi();
-    final store = MockTokenStore();
-    final app = await authenticatedApp(tester, api, store);
+  testWidgets('onglet Accueil : salutation avec le prénom', (tester) async {
+    final app = await authenticatedApp(MockAuthApi(), MockTokenStore());
     await tester.pumpWidget(app);
     await tester.pump();
 
-    await tester.tap(find.byKey(const Key('home-logout-button')));
+    expect(find.text('Bonjour, Jean'), findsOneWidget);
+  });
+
+  testWidgets('déconnexion depuis l\'onglet Profil → session anonyme',
+      (tester) async {
+    final store = MockTokenStore();
+    final app = await authenticatedApp(MockAuthApi(), store);
+    await tester.pumpWidget(app);
+    await tester.pump();
+
+    // Basculer vers l'onglet Profil puis se déconnecter.
+    await tester.tap(find.byKey(const Key('nav-profile')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('profile-logout')));
     await tester.pump();
 
     expect(
@@ -64,5 +66,21 @@ void main() {
       SessionStatus.anonymous,
     );
     verify(() => store.clear()).called(1);
+  });
+
+  testWidgets('onglet Profil : droit de gestion listé', (tester) async {
+    final app = await authenticatedApp(
+      MockAuthApi(),
+      MockTokenStore(),
+      permissions: ['manage_attendance'],
+    );
+    await tester.pumpWidget(app);
+    await tester.pump();
+
+    await tester.tap(find.byKey(const Key('nav-profile')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Jean Dupont'), findsOneWidget);
+    expect(find.text('Gérer les présences'), findsOneWidget);
   });
 }

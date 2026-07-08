@@ -9,7 +9,7 @@ import '../features/auth/presentation/change_password_screen.dart';
 import '../features/auth/presentation/forgot_password_screen.dart';
 import '../features/auth/presentation/login_screen.dart';
 import '../features/auth/presentation/reset_password_screen.dart';
-import '../features/home/presentation/home_screen.dart';
+import '../features/home/presentation/home_shell.dart';
 import '../features/home/presentation/splash_screen.dart';
 
 /// Chemins de routes.
@@ -24,9 +24,11 @@ class Routes {
   static const String changePassword = '/account/change-password';
 }
 
-/// Routes anonymes atteignables explicitement même sans session.
+/// Routes anonymes atteignables explicitement même sans session
+/// (dont l'activation directe depuis « Première connexion »).
 const Set<String> _anonymousRoutes = {
   Routes.login,
+  Routes.activate,
   Routes.forgot,
   Routes.reset,
 };
@@ -86,7 +88,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: Routes.home,
-        builder: (context, state) => const HomeScreen(),
+        builder: (context, state) => const HomeShell(),
       ),
       GoRoute(
         path: Routes.changePassword,

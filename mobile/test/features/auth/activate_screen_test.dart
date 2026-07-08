@@ -44,6 +44,7 @@ void main() {
         find.byKey(const Key('activate-temporary')), 'temp1234');
     await tester.enterText(
         find.byKey(const Key('activate-new-password')), 'abc');
+    await tester.ensureVisible(find.byKey(const Key('activate-submit')));
     await tester.tap(find.byKey(const Key('activate-submit')));
     await tester.pump();
 
