@@ -230,6 +230,7 @@ a:hover { color: var(--brand-primary-hover); }
 /* ---------- Divers ---------- */
 .lx-title { margin: 0 0 var(--space-4); font-size: 1.4rem; font-family: var(--font-display); font-weight: var(--fw-bold); }
 .lx-muted { color: var(--fg-muted); }
+.lx-error { color: var(--color-danger); font-size: 0.85rem; }
 .lx-links { display: flex; justify-content: space-between; margin-top: var(--space-4); flex-wrap: wrap; gap: var(--space-2); }
 
 /* ============================================================
@@ -292,6 +293,19 @@ a:hover { color: var(--brand-primary-hover); }
 
 /* État vide */
 .lx-empty { padding: var(--space-6); text-align: center; color: var(--fg-muted); }
+
+/* Grille de formulaire (2 colonnes sur large écran) */
+.lx-form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 var(--space-4); }
+.lx-form-grid .lx-field-full { grid-column: 1 / -1; }
+@media (max-width: 640px) { .lx-form-grid { grid-template-columns: 1fr; } }
+
+/* Liste de sélection (résultats de recherche membre) */
+.lx-list { list-style: none; padding: 0; margin: var(--space-3) 0 0; }
+.lx-list li {
+  display: flex; justify-content: space-between; align-items: center; gap: var(--space-3);
+  padding: 10px 4px; border-bottom: 1px solid var(--border-subtle);
+}
+.lx-list li:last-child { border-bottom: none; }
 
 /* ============================================================
    Coquille console — sidebar (marque) + topbar + contenu

@@ -107,9 +107,13 @@ Primitives ajoutées au design system (`styles.css`) : `.lx-page-head`, `.lx-too
 | Présences (session-run) | ✅ | En-têtes `.lx-page-head` + table `.lx-table` (liste des présents) |
 | Rapports (dashboard, time-series) | ✅ | Tableau synthèse `.lx-table` + en-tête du panneau Évolution |
 | **Champs mot de passe** | ✅ | Composant réutilisable **`app-password-field`** (toggle afficher/masquer accessible, CVA ReactiveForms) appliqué à login + activation + changement + réinitialisation + installation (9 champs) |
-| Formulaires (member/profile/antenna-form), member-profiles, qr-panel, manual-add, member-rate | ⏳ | héritent déjà des classes ; finitions mineures optionnelles |
+| Formulaire membre | ✅ | Grille **2 colonnes** (`.lx-form-grid`), adresse/référence pleine largeur |
+| member-rate & manual-add | ✅ | Recherche en `.lx-toolbar` + résultats en `.lx-list` (fin des styles inline) |
+| qr-panel | ✅ | Déjà propre (QR centré), inchangé |
+| antenna/profile-form | ✅ | Héritent des classes (3 champs) ; laissés simples |
 
-Build OK · **142 tests Vitest verts** (dont 4 nouveaux pour `app-password-field`).
+Primitives finales ajoutées : `.lx-form-grid`, `.lx-list`, `.lx-error` (global).
+Build OK · **142 tests Vitest verts** (dont 4 pour `app-password-field`). **Passe 2 complète.**
 
 ## Hors périmètre (cette passe)
 

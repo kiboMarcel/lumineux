@@ -18,9 +18,8 @@ import { MemberLookupItem } from '../../attendance.models';
     <div class="lx-card" style="margin-top:1rem;">
       <h3 style="margin-top:0;">Ajout manuel d'une présence</h3>
 
-      <form (ngSubmit)="search()" style="display:flex; gap:0.5rem;">
-        <input type="text" [(ngModel)]="query" name="query" placeholder="Référence ou nom…"
-               style="flex:1; padding:0.5rem; border:1px solid var(--lx-border); border-radius:8px;" />
+      <form (ngSubmit)="search()" class="lx-toolbar">
+        <input type="text" [(ngModel)]="query" name="query" placeholder="Référence ou nom…" />
         <button type="submit" class="lx-btn" [disabled]="searching() || !query.trim()">Rechercher</button>
       </form>
 
@@ -33,11 +32,11 @@ import { MemberLookupItem } from '../../attendance.models';
       } @else if (searched() && results().length === 0) {
         <p class="lx-muted">Aucun membre trouvé.</p>
       } @else if (results().length > 0) {
-        <ul style="list-style:none; padding:0; margin:0.75rem 0 0;">
+        <ul class="lx-list">
           @for (m of results(); track m.id) {
-            <li style="display:flex; justify-content:space-between; align-items:center; padding:0.4rem 0; border-bottom:1px solid var(--lx-border);">
+            <li>
               <span>{{ m.fullName }} <span class="lx-muted">({{ m.reference }} — {{ m.status }})</span></span>
-              <button type="button" class="lx-btn lx-btn-ghost" [disabled]="adding()" (click)="add(m)">Ajouter</button>
+              <button type="button" class="lx-btn lx-btn-ghost lx-btn-sm" [disabled]="adding()" (click)="add(m)">Ajouter</button>
             </li>
           }
         </ul>

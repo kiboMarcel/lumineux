@@ -61,8 +61,9 @@ import { CreateMemberRequest, CredentialsDelivery, MemberCreatedResponse } from 
         }
 
         <form [formGroup]="form" (ngSubmit)="submit(false)">
+          <div class="lx-form-grid">
           @if (isEdit()) {
-            <div class="lx-field">
+            <div class="lx-field lx-field-full">
               <label>Référence (non modifiable)</label>
               <input type="text" [value]="reference()" disabled />
             </div>
@@ -122,9 +123,10 @@ import { CreateMemberRequest, CredentialsDelivery, MemberCreatedResponse } from 
               @for (c of countries(); track c.id) { <option [ngValue]="c.id">{{ c.nationality }}</option> }
             </select>
           </div>
-          <div class="lx-field">
+          <div class="lx-field lx-field-full">
             <label for="address">Adresse</label>
             <input id="address" type="text" formControlName="address" />
+          </div>
           </div>
 
           <button type="submit" class="lx-btn" [disabled]="form.invalid || loading() || noAntenna()">
