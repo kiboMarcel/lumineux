@@ -18,6 +18,8 @@ public sealed class AttendanceSessionConfiguration : IEntityTypeConfiguration<At
         builder.Property(x => x.Status).HasColumnName("status").HasConversion<string>().HasMaxLength(20).IsRequired();
         builder.Property(x => x.OpenedByMemberId).HasColumnName("opened_by").IsRequired();
         builder.Property(x => x.ClosedByMemberId).HasColumnName("closed_by");
+        builder.Property(x => x.CancelledByMemberId).HasColumnName("cancelled_by");
+        builder.Property(x => x.CancelledAt).HasColumnName("cancelled_at");
         builder.Property(x => x.QrSecret).HasColumnName("qr_secret").HasMaxLength(512).IsRequired();
         builder.Property(x => x.QrStepSeconds).HasColumnName("qr_step_seconds").IsRequired();
 

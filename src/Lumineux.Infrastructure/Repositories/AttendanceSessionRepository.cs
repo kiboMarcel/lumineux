@@ -35,6 +35,20 @@ public sealed class AttendanceSessionRepository : IAttendanceSessionRepository
     public async Task AddAsync(AttendanceSession session, CancellationToken ct = default) =>
         await _db.AttendanceSessions.AddAsync(session, ct);
 
+    public async Task<T> ExecuteInSerializableTransactionAsync<T>(
+        Func<CancellationToken, Task<T>> action, CancellationToken ct = default)
+    {
+        var strategy = _db.Database.CreateExecutionStrategy();
+        return await strategy.ExecuteAsync(async () =>
+        {
+            await using var tx = await _db.Database.BeginTransactionAsync(
+                System.Data.IsolationLevel.Serializable, ct);
+            var result = await action(ct);
+            await tx.CommitAsync(ct);
+            return result;
+        });
+    }
+
     public async Task<IReadOnlyList<AttendanceSession>> ListOpenBeforeAsync(DateTime startedBeforeUtc, CancellationToken ct = default) =>
         await _db.AttendanceSessions
             // Expiration mesurée sur la durée d'ouverture réelle (StartTime), et non sur MeetingDate

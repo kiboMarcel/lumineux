@@ -26,6 +26,12 @@ public class AttendanceSession : AbstractEntity
 
     public int? ClosedByMemberId { get; private set; }
 
+    /// <summary>Auteur de l'annulation (feature 028) — audit ; null si non annulée.</summary>
+    public int? CancelledByMemberId { get; private set; }
+
+    /// <summary>Horodatage (UTC serveur) de l'annulation ; null si non annulée.</summary>
+    public DateTime? CancelledAt { get; private set; }
+
     /// <summary>Secret de dérivation du jeton QR rotatif — jamais exposé aux clients.</summary>
     public string QrSecret { get; private set; } = default!;
 
@@ -89,6 +95,25 @@ public class AttendanceSession : AbstractEntity
         Status = SessionStatus.Closed;
         EndTime = nowUtc;
         ClosedByMemberId = closedByMemberId;
+    }
+
+    /// <summary>
+    /// Annule une session **vide** créée par erreur (feature 028). Transition réservée à une session
+    /// **ouverte** ; la condition « aucune présence valide » est vérifiée par la couche Application
+    /// (le domaine n'a pas le décompte). État terminal, conservé pour l'audit.
+    /// </summary>
+    public void Cancel(int cancelledByMemberId, DateTime nowUtc)
+    {
+        if (Status != SessionStatus.Open)
+        {
+            throw new ConflictException(Status == SessionStatus.Cancelled
+                ? "La session est déjà annulée."
+                : "La session n'est pas ouverte : annulation impossible.");
+        }
+
+        Status = SessionStatus.Cancelled;
+        CancelledByMemberId = cancelledByMemberId;
+        CancelledAt = nowUtc;
     }
 
     /// <summary>

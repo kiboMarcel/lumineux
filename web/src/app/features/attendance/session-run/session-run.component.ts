@@ -1,6 +1,6 @@
 import { Component, OnDestroy, OnInit, computed, inject, signal } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { AttendanceSessionsApi } from '../../../core/api/attendance-sessions-api';
 import { AttendancesApi } from '../../../core/api/attendances-api';
 import { messageForError } from '../../../core/http/error-messages';
@@ -35,9 +35,16 @@ const POLL_INTERVAL_MS = 5000;
         @if (isClosed()) {
           <p class="lx-muted">Session clôturée@if (s.endTime) { le {{ s.endTime }}}. Les présences sont figées.</p>
         } @else {
-          <button type="button" class="lx-btn lx-btn-ghost" (click)="close()" [disabled]="closing()">
-            {{ closing() ? 'Clôture…' : 'Clôturer la session' }}
-          </button>
+          <div class="lx-links" style="margin:0;">
+            <button type="button" class="lx-btn lx-btn-ghost" (click)="close()" [disabled]="closing() || cancelling()">
+              {{ closing() ? 'Clôture…' : 'Clôturer la session' }}
+            </button>
+            @if (canCancelSession()) {
+              <button type="button" class="lx-btn lx-btn-ghost" (click)="cancelSession()" [disabled]="cancelling() || closing()">
+                {{ cancelling() ? 'Annulation…' : 'Annuler la session' }}
+              </button>
+            }
+          </div>
         }
       } @else {
         <p class="lx-error">{{ error() || 'Session introuvable.' }}</p>
@@ -106,6 +113,7 @@ const POLL_INTERVAL_MS = 5000;
 })
 export class SessionRunComponent implements OnInit, OnDestroy {
   private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
   private readonly sessionsApi = inject(AttendanceSessionsApi);
   private readonly attendancesApi = inject(AttendancesApi);
   private readonly notifier = inject(NotificationService);
@@ -123,8 +131,17 @@ export class SessionRunComponent implements OnInit, OnDestroy {
   readonly loading = signal(true);
   readonly error = signal<string | null>(null);
   readonly closing = signal(false);
+  readonly cancelling = signal(false);
 
   readonly isClosed = computed(() => this.session()?.status === 'Closed');
+
+  /**
+   * Annulation possible uniquement pour une session **ouverte** **et vide** (feature 028). Commodité UX :
+   * le serveur re-vérifie et reste l'autorité.
+   */
+  readonly canCancelSession = computed(
+    () => this.session()?.status === 'Open' && this.validCount() === 0,
+  );
 
   private sessionId = 0;
   private pollTimer: ReturnType<typeof setInterval> | null = null;
@@ -198,6 +215,30 @@ export class SessionRunComponent implements OnInit, OnDestroy {
       error: (err: HttpErrorResponse) => {
         this.notifier.error(messageForError(err));
         this.closing.set(false);
+      },
+    });
+  }
+
+  cancelSession(): void {
+    if (this.cancelling() || this.closing()) {
+      return;
+    }
+    if (!confirm('Annuler définitivement cette session vide ? Cette action est irréversible.')) {
+      return;
+    }
+    this.cancelling.set(true);
+    this.sessionsApi.cancel(this.sessionId).subscribe({
+      next: () => {
+        this.cancelling.set(false);
+        this.stopPolling();
+        this.notifier.info('Session annulée.');
+        void this.router.navigate(['/attendance']);
+      },
+      error: (err: HttpErrorResponse) => {
+        // 409 « contient des présences » (course) ou « non ouverte » : rester et rafraîchir l'état.
+        this.notifier.error(messageForError(err));
+        this.cancelling.set(false);
+        this.loadSession();
       },
     });
   }

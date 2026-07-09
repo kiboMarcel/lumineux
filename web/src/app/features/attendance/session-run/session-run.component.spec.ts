@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, Router, provideRouter } from '@angular/router';
 import { of, throwError } from 'rxjs';
 import { HttpErrorResponse } from '@angular/common/http';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -12,18 +12,20 @@ const closedSession = { ...openSession, status: 'Closed', endTime: '2026-07-05T1
 const list = (validCount = 0, items: unknown[] = []) => ({ sessionId: 7, validCount, items });
 
 describe('SessionRunComponent (US1/US2/US3/US4)', () => {
-  const sessionsApi = { get: vi.fn(), close: vi.fn() };
+  const sessionsApi = { get: vi.fn(), close: vi.fn(), cancel: vi.fn() };
   const attendancesApi = { list: vi.fn(), cancel: vi.fn() };
 
   beforeEach(() => {
     sessionsApi.get.mockReset();
     sessionsApi.close.mockReset();
+    sessionsApi.cancel.mockReset();
     attendancesApi.list.mockReset();
     attendancesApi.cancel.mockReset();
     sessionsApi.get.mockReturnValue(of(openSession));
     attendancesApi.list.mockReturnValue(of(list()));
     TestBed.configureTestingModule({
       providers: [
+        provideRouter([]),
         { provide: ActivatedRoute, useValue: { snapshot: { paramMap: { get: () => '7' } } } },
         { provide: AttendanceSessionsApi, useValue: sessionsApi },
         { provide: AttendancesApi, useValue: attendancesApi },
@@ -108,5 +110,50 @@ describe('SessionRunComponent (US1/US2/US3/US4)', () => {
     comp.close();
     expect(comp.isClosed()).toBe(false);
     expect(comp.closing()).toBe(false);
+  });
+
+  // Feature 028 — annulation d'une session vide
+
+  it('propose l\'annulation seulement si la session est ouverte et vide (028)', () => {
+    attendancesApi.list.mockReturnValue(of(list(0)));
+    const comp = run();
+    expect(comp.canCancelSession()).toBe(true); // ouverte + 0 présence valide
+  });
+
+  it('ne propose pas l\'annulation dès qu\'une présence valide existe (028)', () => {
+    attendancesApi.list.mockReturnValue(of(list(2)));
+    const comp = run();
+    expect(comp.canCancelSession()).toBe(false);
+  });
+
+  it('annule la session vide après confirmation puis redirige (028)', () => {
+    sessionsApi.cancel.mockReturnValue(of({ ...openSession, status: 'Cancelled' }));
+    vi.spyOn(window, 'confirm').mockReturnValue(true);
+    const comp = run();
+    const navSpy = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+
+    comp.cancelSession();
+
+    expect(sessionsApi.cancel).toHaveBeenCalledWith(7);
+    expect(navSpy).toHaveBeenCalledWith(['/attendance']);
+  });
+
+  it('sur 409, affiche l\'erreur et ne redirige pas (028)', () => {
+    sessionsApi.cancel.mockReturnValue(throwError(() => new HttpErrorResponse({ status: 409 })));
+    vi.spyOn(window, 'confirm').mockReturnValue(true);
+    const comp = run();
+    const navSpy = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+
+    comp.cancelSession();
+
+    expect(navSpy).not.toHaveBeenCalled();
+    expect(comp.cancelling()).toBe(false);
+  });
+
+  it('n\'annule pas la session si la confirmation est refusée (028)', () => {
+    vi.spyOn(window, 'confirm').mockReturnValue(false);
+    const comp = run();
+    comp.cancelSession();
+    expect(sessionsApi.cancel).not.toHaveBeenCalled();
   });
 });

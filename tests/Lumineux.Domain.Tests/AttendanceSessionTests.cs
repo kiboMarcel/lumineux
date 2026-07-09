@@ -70,4 +70,41 @@ public sealed class AttendanceSessionTests
         var act = () => session.Close(7, Now.AddHours(2));
         act.Should().Throw<ConflictException>();
     }
+
+    // Feature 028 — annulation d'une session vide
+
+    [Fact]
+    public void Cancel_open_session_sets_cancelled_state_with_audit()
+    {
+        var session = AttendanceSession.Start(1, Now.Date, 42, "secret", 30, Now);
+        var cancelTime = Now.AddMinutes(3);
+
+        session.Cancel(cancelledByMemberId: 7, cancelTime);
+
+        session.Status.Should().Be(SessionStatus.Cancelled);
+        session.IsOpen.Should().BeFalse();
+        session.CancelledByMemberId.Should().Be(7);
+        session.CancelledAt.Should().Be(cancelTime);
+        session.EndTime.Should().BeNull(); // pas une clôture
+    }
+
+    [Fact]
+    public void Cancel_when_closed_throws_conflict()
+    {
+        var session = AttendanceSession.Start(1, Now.Date, 42, "secret", 30, Now);
+        session.Close(7, Now.AddHours(1));
+
+        var act = () => session.Cancel(7, Now.AddHours(2));
+        act.Should().Throw<ConflictException>();
+    }
+
+    [Fact]
+    public void Cancel_when_already_cancelled_throws_conflict()
+    {
+        var session = AttendanceSession.Start(1, Now.Date, 42, "secret", 30, Now);
+        session.Cancel(7, Now.AddMinutes(1));
+
+        var act = () => session.Cancel(7, Now.AddMinutes(2));
+        act.Should().Throw<ConflictException>();
+    }
 }

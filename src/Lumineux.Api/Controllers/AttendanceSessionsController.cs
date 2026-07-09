@@ -15,6 +15,7 @@ public sealed class AttendanceSessionsController : ControllerBase
     private readonly GetSessionHandler _getSession;
     private readonly GetCurrentQrTokenHandler _getQrToken;
     private readonly CloseSessionHandler _closeSession;
+    private readonly CancelSessionHandler _cancelSession;
     private readonly ListMyOpenSessionsHandler _myOpenSessions;
 
     public AttendanceSessionsController(
@@ -22,12 +23,14 @@ public sealed class AttendanceSessionsController : ControllerBase
         GetSessionHandler getSession,
         GetCurrentQrTokenHandler getQrToken,
         CloseSessionHandler closeSession,
+        CancelSessionHandler cancelSession,
         ListMyOpenSessionsHandler myOpenSessions)
     {
         _startSession = startSession;
         _getSession = getSession;
         _getQrToken = getQrToken;
         _closeSession = closeSession;
+        _cancelSession = cancelSession;
         _myOpenSessions = myOpenSessions;
     }
 
@@ -64,4 +67,13 @@ public sealed class AttendanceSessionsController : ControllerBase
     [ProducesResponseType(typeof(SessionResponse), StatusCodes.Status200OK)]
     public async Task<ActionResult<SessionResponse>> Close(int sessionId, CancellationToken ct) =>
         Ok(await _closeSession.HandleAsync(sessionId, ct));
+
+    /// <summary>Annule une session **ouverte et vide** (feature 028). 200 si annulée ; 404 introuvable ;
+    /// 409 si non ouverte ou si elle contient des présences.</summary>
+    [HttpPost("{sessionId:int}/cancel")]
+    [ProducesResponseType(typeof(SessionResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    public async Task<ActionResult<SessionResponse>> Cancel(int sessionId, CancellationToken ct) =>
+        Ok(await _cancelSession.HandleAsync(sessionId, ct));
 }

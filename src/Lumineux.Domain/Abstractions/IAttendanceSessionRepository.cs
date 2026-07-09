@@ -18,6 +18,13 @@ public interface IAttendanceSessionRepository
 
     Task AddAsync(AttendanceSession session, CancellationToken ct = default);
 
+    /// <summary>
+    /// Exécute une opération dans une **transaction sérialisable** (verrou de plage) : l'annulation
+    /// d'une session vide est protégée contre un ajout de présence concurrent (feature 028, FR-004/SC-003).
+    /// </summary>
+    Task<T> ExecuteInSerializableTransactionAsync<T>(
+        Func<CancellationToken, Task<T>> action, CancellationToken ct = default);
+
     /// <summary>Liste (suivies) les sessions encore ouvertes dont la date de réunion précède le seuil (clôture auto, FR-024).</summary>
     Task<IReadOnlyList<AttendanceSession>> ListOpenBeforeAsync(DateTime startedBeforeUtc, CancellationToken ct = default);
 

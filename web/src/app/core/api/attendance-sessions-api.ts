@@ -34,4 +34,9 @@ export class AttendanceSessionsApi {
   close(sessionId: number): Observable<SessionResponse> {
     return this.http.post<SessionResponse>(`${this.base}/${sessionId}/close`, {});
   }
+
+  /** Annule une session **ouverte et vide** (feature 028). 409 si non ouverte ou si elle a des présences. */
+  cancel(sessionId: number): Observable<SessionResponse> {
+    return this.http.post<SessionResponse>(`${this.base}/${sessionId}/cancel`, {});
+  }
 }

@@ -19,6 +19,7 @@ public static class DependencyInjection
         services.AddScoped<GetSessionHandler>();
         services.AddScoped<GetCurrentQrTokenHandler>();
         services.AddScoped<CloseSessionHandler>();
+        services.AddScoped<CancelSessionHandler>();
         services.AddScoped<ListMyOpenSessionsHandler>();
 
         services.AddScoped<ScanAttendanceHandler>();
