@@ -18,25 +18,25 @@ import { AntennaResponse } from '../antenna.models';
   selector: 'app-antenna-list',
   imports: [RouterLink],
   template: `
-    <div class="lx-card">
-      <div class="lx-topbar" style="border:0; padding:0; margin-bottom:1rem;">
-        <h1 class="lx-title" style="margin:0;">Antennes</h1>
-        <a class="lx-btn" routerLink="/antennas/new">Nouvelle antenne</a>
-      </div>
+    <div class="lx-page-head">
+      <h1 class="lx-title">Antennes</h1>
+      <a class="lx-btn" routerLink="/antennas/new">Nouvelle antenne</a>
+    </div>
 
+    <div class="lx-card">
       @if (loading()) {
-        <p class="lx-muted">Chargement…</p>
+        <p class="lx-empty">Chargement…</p>
       } @else if (antennas().length === 0) {
-        <p class="lx-muted">Aucune antenne. Créez-en une pour commencer.</p>
+        <p class="lx-empty">Aucune antenne. Créez-en une pour commencer.</p>
       } @else {
-        <div style="overflow-x:auto;">
-          <table style="width:100%; border-collapse:collapse;">
+        <div class="lx-table-wrap">
+          <table class="lx-table">
             <thead>
               <tr>
-                <th style="text-align:left;">Code</th>
-                <th style="text-align:left;">Libellé</th>
-                <th style="text-align:left;">District</th>
-                <th style="text-align:left;">Statut</th>
+                <th>Code</th>
+                <th>Libellé</th>
+                <th>District</th>
+                <th>Statut</th>
                 <th></th>
               </tr>
             </thead>
@@ -46,14 +46,18 @@ import { AntennaResponse } from '../antenna.models';
                   <td>{{ a.code }}</td>
                   <td>{{ a.label }}</td>
                   <td>{{ districtLabel(a.districtId) }}</td>
-                  <td>{{ a.status === 'Active' ? 'Active' : 'Inactive' }}</td>
-                  <td style="white-space:nowrap;">
-                    <a class="lx-btn lx-btn-ghost" [routerLink]="['/antennas', a.id, 'edit']">Modifier</a>
-                    @if (a.status === 'Active') {
-                      <button type="button" class="lx-btn lx-btn-ghost" [disabled]="busyId() === a.id" (click)="deactivate(a)">Désactiver</button>
-                    } @else {
-                      <button type="button" class="lx-btn lx-btn-ghost" [disabled]="busyId() === a.id" (click)="activate(a)">Réactiver</button>
-                    }
+                  <td>
+                    <span class="lx-pill" [class.lx-pill-success]="a.status === 'Active'" [class.lx-pill-muted]="a.status !== 'Active'">{{ a.status === 'Active' ? 'Active' : 'Inactive' }}</span>
+                  </td>
+                  <td>
+                    <span class="lx-row-actions">
+                      <a class="lx-btn lx-btn-ghost lx-btn-sm" [routerLink]="['/antennas', a.id, 'edit']">Modifier</a>
+                      @if (a.status === 'Active') {
+                        <button type="button" class="lx-btn lx-btn-ghost lx-btn-sm" [disabled]="busyId() === a.id" (click)="deactivate(a)">Désactiver</button>
+                      } @else {
+                        <button type="button" class="lx-btn lx-btn-ghost lx-btn-sm" [disabled]="busyId() === a.id" (click)="activate(a)">Réactiver</button>
+                      }
+                    </span>
                   </td>
                 </tr>
               }

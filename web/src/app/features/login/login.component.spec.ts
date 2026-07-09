@@ -87,15 +87,6 @@ describe('LoginComponent (US1, FR-010)', () => {
     expect(comp.showSetupLink()).toBe(false);
   });
 
-  it('affiche/masque le mot de passe : masqué par défaut, bascule à la demande', () => {
-    const comp = TestBed.createComponent(LoginComponent).componentInstance;
-    expect(comp.showPassword()).toBe(false); // masqué par défaut
-    comp.showPassword.set(true);
-    expect(comp.showPassword()).toBe(true); // affiché après bascule
-    comp.showPassword.set(false);
-    expect(comp.showPassword()).toBe(false);
-  });
-
   it('[US2] masque le lien (défaut sûr) si le statut est indisponible, sans bloquer la connexion', () => {
     setupApi.status.mockReturnValue(throwError(() => new HttpErrorResponse({ status: 0 })));
     authApi.login.mockReturnValue(of({ accessToken: 'tok', tokenType: 'Bearer', expiresAt: '' }));

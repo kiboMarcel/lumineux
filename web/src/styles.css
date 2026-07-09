@@ -233,6 +233,67 @@ a:hover { color: var(--brand-primary-hover); }
 .lx-links { display: flex; justify-content: space-between; margin-top: var(--space-4); flex-wrap: wrap; gap: var(--space-2); }
 
 /* ============================================================
+   Primitives de contenu (passe 2) — en-têtes, tables, pastilles
+   ============================================================ */
+
+/* En-tête de page (titre + actions) */
+.lx-page-head {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: var(--space-4); margin-bottom: var(--space-5); flex-wrap: wrap;
+}
+.lx-page-head .lx-title { margin: 0; }
+.lx-page-head .lx-subtitle { margin: 2px 0 0; font-size: 0.9rem; color: var(--fg-muted); }
+
+/* Barre d'outils (recherche / filtres) */
+.lx-toolbar { display: flex; gap: var(--space-2); margin-bottom: var(--space-4); flex-wrap: wrap; align-items: center; }
+.lx-toolbar input[type="text"],
+.lx-toolbar input[type="search"],
+.lx-toolbar select {
+  flex: 1; min-width: 180px;
+  padding: 9px 12px; border: 1px solid var(--border-default); border-radius: var(--radius-md);
+  font-family: var(--font-body); font-size: 0.95rem; color: var(--fg-primary);
+  background: var(--bg-surface); outline: none;
+  transition: border-color var(--duration-fast), box-shadow var(--duration-fast);
+}
+.lx-toolbar input:focus, .lx-toolbar select:focus { border-color: var(--border-brand); box-shadow: var(--shadow-focus); }
+
+/* Table */
+.lx-table-wrap { overflow-x: auto; border: 1px solid var(--border-subtle); border-radius: var(--radius-lg); }
+.lx-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+.lx-table thead th {
+  text-align: left; font-weight: var(--fw-semibold); font-size: 0.72rem;
+  letter-spacing: 0.06em; text-transform: uppercase; color: var(--fg-muted);
+  padding: 11px 14px; background: var(--bg-surface-alt);
+  border-bottom: 1px solid var(--border-subtle); white-space: nowrap;
+}
+.lx-table tbody td { padding: 11px 14px; border-bottom: 1px solid var(--border-subtle); color: var(--fg-body); vertical-align: middle; }
+.lx-table tbody tr:last-child td { border-bottom: none; }
+.lx-table tbody tr:hover { background: var(--bg-surface-alt); }
+.lx-table a { font-weight: var(--fw-semibold); }
+
+/* Pastilles de statut */
+.lx-pill {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 2px 10px; border-radius: var(--radius-pill);
+  font-size: 0.72rem; font-weight: var(--fw-semibold); line-height: 1.7;
+  background: var(--neutral-200); color: var(--fg-body);
+}
+.lx-pill::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+.lx-pill-success { background: var(--color-success-soft); color: var(--color-success); }
+.lx-pill-muted   { background: var(--neutral-200); color: var(--fg-muted); }
+.lx-pill-warn    { background: var(--accent-warm-soft); color: var(--accent-warm-text); }
+.lx-pill-info    { background: var(--brand-primary-soft); color: var(--brand-primary); }
+.lx-pill-plain::before { display: none; }
+.lx-tags { display: flex; flex-wrap: wrap; gap: 6px; }
+
+/* Actions de ligne + petit bouton */
+.lx-row-actions { display: inline-flex; gap: var(--space-2); white-space: nowrap; }
+.lx-btn.lx-btn-sm { padding: 5px 11px; font-size: 0.82rem; }
+
+/* État vide */
+.lx-empty { padding: var(--space-6); text-align: center; color: var(--fg-muted); }
+
+/* ============================================================
    Coquille console — sidebar (marque) + topbar + contenu
    ============================================================ */
 .lx-shell { display: flex; min-height: 100vh; width: 100%; }

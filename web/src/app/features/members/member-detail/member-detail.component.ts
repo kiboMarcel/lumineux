@@ -14,7 +14,7 @@ import { MemberResponse } from '../member.models';
         <div class="lx-alert lx-alert-error" role="alert">Membre introuvable.</div>
         <a routerLink="/members">Retour à la liste</a>
       } @else if (member(); as m) {
-        <div class="lx-topbar" style="border:0; padding:0; margin-bottom:1rem;">
+        <div class="lx-page-head">
           <h1 class="lx-title" style="margin:0;">{{ m.firstName }} {{ m.lastName }}</h1>
           <div class="lx-links" style="margin:0;">
             <a class="lx-btn lx-btn-ghost" [routerLink]="['/members', m.id, 'profiles']">Profils & droits</a>

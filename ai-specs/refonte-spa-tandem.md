@@ -91,6 +91,26 @@ flowchart TD
 4. MAJ styles d'impression (masquer sidebar+topbar ; préserver contenu).
 5. `ng build` + revue visuelle ; corriger le spec du shell si le markup change les assertions.
 
+## Passe 2 — avancement (finitions écran par écran)
+
+Primitives ajoutées au design system (`styles.css`) : `.lx-page-head`, `.lx-toolbar`,
+`.lx-table-wrap`/`.lx-table`, `.lx-pill` (+ success/muted/warn/info/plain), `.lx-row-actions`,
+`.lx-btn-sm`, `.lx-empty`, `.lx-tags`.
+
+| Écran | Statut | Détail |
+|-------|--------|--------|
+| Accueil (`home`) | ✅ | En-tête de page + droits en pastilles (au lieu d'une liste brute) |
+| Liste membres | ✅ | En-tête, barre d'outils de recherche, table stylée, statut en pastille |
+| Liste antennes | ✅ | En-tête, table stylée, statut en pastille, actions de ligne compactes |
+| Liste profils | ✅ | En-tête, table stylée, compteurs droits/titulaires en pastilles |
+| Détails membre & profil | ✅ | En-tête `.lx-page-head` (fin du hack `lx-topbar`) |
+| Présences (session-run) | ✅ | En-têtes `.lx-page-head` + table `.lx-table` (liste des présents) |
+| Rapports (dashboard, time-series) | ✅ | Tableau synthèse `.lx-table` + en-tête du panneau Évolution |
+| **Champs mot de passe** | ✅ | Composant réutilisable **`app-password-field`** (toggle afficher/masquer accessible, CVA ReactiveForms) appliqué à login + activation + changement + réinitialisation + installation (9 champs) |
+| Formulaires (member/profile/antenna-form), member-profiles, qr-panel, manual-add, member-rate | ⏳ | héritent déjà des classes ; finitions mineures optionnelles |
+
+Build OK · **142 tests Vitest verts** (dont 4 nouveaux pour `app-password-field`).
+
 ## Hors périmètre (cette passe)
 
 Restyle détaillé des tableaux/graphes/formulaires métier ; thème sombre ; animations avancées ;

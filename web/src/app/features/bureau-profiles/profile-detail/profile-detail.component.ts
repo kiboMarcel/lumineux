@@ -19,7 +19,7 @@ import { BureauProfileDetail } from '../bureau-profile.models';
         <div class="lx-alert lx-alert-error" role="alert">Profil introuvable.</div>
         <a routerLink="/bureau-profiles">Retour à la liste</a>
       } @else if (profile(); as p) {
-        <div class="lx-topbar" style="border:0; padding:0; margin-bottom:1rem;">
+        <div class="lx-page-head">
           <h1 class="lx-title" style="margin:0;">{{ p.name }}</h1>
           @if (canWrite()) {
             <div class="lx-links" style="margin:0;">

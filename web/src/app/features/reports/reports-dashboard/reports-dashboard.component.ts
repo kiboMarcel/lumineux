@@ -61,8 +61,8 @@ import { TimeSeriesChartComponent } from '../time-series-chart/time-series-chart
         @if (s.items.length === 0) {
           <p class="lx-muted">Aucune donnée de présence sur cette période.</p>
         } @else {
-          <div style="overflow-x:auto; margin-top:1rem;">
-            <table style="width:100%; border-collapse:collapse;">
+          <div class="lx-table-wrap" style="margin-top:1rem;">
+            <table class="lx-table">
               <thead>
                 <tr>
                   <th style="text-align:left;">Antenne</th>

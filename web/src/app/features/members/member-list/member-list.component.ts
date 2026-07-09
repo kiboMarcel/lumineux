@@ -9,32 +9,31 @@ import { MemberListItem } from '../member.models';
   selector: 'app-member-list',
   imports: [FormsModule, RouterLink],
   template: `
-    <div class="lx-card">
-      <div class="lx-topbar" style="border:0; padding:0; margin-bottom:1rem;">
-        <h1 class="lx-title" style="margin:0;">Membres</h1>
-        <a class="lx-btn" routerLink="/members/new">Nouveau membre</a>
-      </div>
+    <div class="lx-page-head">
+      <h1 class="lx-title">Membres</h1>
+      <a class="lx-btn" routerLink="/members/new">Nouveau membre</a>
+    </div>
 
-      <form (ngSubmit)="search()" style="display:flex; gap:0.5rem; margin-bottom:1rem;">
-        <input type="text" [(ngModel)]="query" name="query" placeholder="Nom, référence ou contact…"
-               style="flex:1; padding:0.5rem; border:1px solid var(--lx-border); border-radius:8px;" />
+    <div class="lx-card">
+      <form (ngSubmit)="search()" class="lx-toolbar">
+        <input type="text" [(ngModel)]="query" name="query" placeholder="Nom, référence ou contact…" />
         <button type="submit" class="lx-btn" [disabled]="loading()">Rechercher</button>
       </form>
 
       @if (loading()) {
-        <p class="lx-muted">Chargement…</p>
+        <p class="lx-empty">Chargement…</p>
       } @else if (items().length === 0) {
-        <p class="lx-muted">Aucun membre trouvé.</p>
+        <p class="lx-empty">Aucun membre trouvé.</p>
       } @else {
-        <div style="overflow-x:auto;">
-          <table style="width:100%; border-collapse:collapse;">
+        <div class="lx-table-wrap">
+          <table class="lx-table">
             <thead>
               <tr>
-                <th style="text-align:left;">Référence</th>
-                <th style="text-align:left;">Nom</th>
-                <th style="text-align:left;">Prénom</th>
-                <th style="text-align:left;">Contact</th>
-                <th style="text-align:left;">Statut</th>
+                <th>Référence</th>
+                <th>Nom</th>
+                <th>Prénom</th>
+                <th>Contact</th>
+                <th>Statut</th>
               </tr>
             </thead>
             <tbody>
@@ -44,7 +43,9 @@ import { MemberListItem } from '../member.models';
                   <td>{{ m.lastName }}</td>
                   <td>{{ m.firstName }}</td>
                   <td>{{ m.email || m.mobile || '—' }}</td>
-                  <td>{{ m.status }}</td>
+                  <td>
+                    <span class="lx-pill" [class.lx-pill-success]="m.status === 'Active'" [class.lx-pill-muted]="m.status !== 'Active'">{{ m.status }}</span>
+                  </td>
                 </tr>
               }
             </tbody>

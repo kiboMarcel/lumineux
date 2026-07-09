@@ -27,7 +27,7 @@ const POLL_INTERVAL_MS = 5000;
       @if (loading()) {
         <p class="lx-muted">Chargement de la session…</p>
       } @else if (session(); as s) {
-        <div class="lx-topbar" style="border:0; padding:0; margin-bottom:1rem;">
+        <div class="lx-page-head">
           <h1 class="lx-title" style="margin:0;">Session de présence #{{ s.id }}</h1>
           <span class="lx-muted">{{ s.meetingDate }} — {{ isClosed() ? 'Clôturée' : 'Ouverte' }}</span>
         </div>
@@ -52,7 +52,7 @@ const POLL_INTERVAL_MS = 5000;
 
     @if (session()) {
       <div class="lx-card" style="margin-top:1rem;">
-        <div class="lx-topbar" style="border:0; padding:0; margin-bottom:0.75rem;">
+        <div class="lx-page-head" style="margin-bottom:0.75rem;">
           <h2 style="margin:0; font-size:1.1rem;">Présences — {{ validCount() }} valide(s)</h2>
           <div class="lx-links" style="margin:0;">
             @for (f of filters; track f.value) {
@@ -66,8 +66,8 @@ const POLL_INTERVAL_MS = 5000;
         @if (attendances().length === 0) {
           <p class="lx-muted">Aucune présence pour ce filtre.</p>
         } @else {
-          <div style="overflow-x:auto;">
-            <table style="width:100%; border-collapse:collapse;">
+          <div class="lx-table-wrap">
+            <table class="lx-table">
               <thead>
                 <tr>
                   <th style="text-align:left;">Membre</th>

@@ -9,27 +9,27 @@ import { BureauProfileSummary } from '../bureau-profile.models';
   selector: 'app-profile-list',
   imports: [RouterLink],
   template: `
-    <div class="lx-card">
-      <div class="lx-topbar" style="border:0; padding:0; margin-bottom:1rem;">
-        <h1 class="lx-title" style="margin:0;">Profils du bureau</h1>
-        @if (canWrite()) {
-          <a class="lx-btn" routerLink="/bureau-profiles/new">Nouveau profil</a>
-        }
-      </div>
+    <div class="lx-page-head">
+      <h1 class="lx-title">Profils du bureau</h1>
+      @if (canWrite()) {
+        <a class="lx-btn" routerLink="/bureau-profiles/new">Nouveau profil</a>
+      }
+    </div>
 
+    <div class="lx-card">
       @if (loading()) {
-        <p class="lx-muted">Chargement…</p>
+        <p class="lx-empty">Chargement…</p>
       } @else if (profiles().length === 0) {
-        <p class="lx-muted">Aucun profil.</p>
+        <p class="lx-empty">Aucun profil.</p>
       } @else {
-        <div style="overflow-x:auto;">
-          <table style="width:100%; border-collapse:collapse;">
+        <div class="lx-table-wrap">
+          <table class="lx-table">
             <thead>
               <tr>
-                <th style="text-align:left;">Nom</th>
-                <th style="text-align:left;">Description</th>
-                <th style="text-align:left;">Droits</th>
-                <th style="text-align:left;">Titulaires</th>
+                <th>Nom</th>
+                <th>Description</th>
+                <th>Droits</th>
+                <th>Titulaires</th>
               </tr>
             </thead>
             <tbody>
@@ -37,8 +37,8 @@ import { BureauProfileSummary } from '../bureau-profile.models';
                 <tr>
                   <td><a [routerLink]="['/bureau-profiles', p.id]">{{ p.name }}</a></td>
                   <td>{{ p.description || '—' }}</td>
-                  <td>{{ p.permissions.length }}</td>
-                  <td>{{ p.memberCount }}</td>
+                  <td><span class="lx-pill lx-pill-info lx-pill-plain">{{ p.permissions.length }}</span></td>
+                  <td><span class="lx-pill lx-pill-muted lx-pill-plain">{{ p.memberCount }}</span></td>
                 </tr>
               }
             </tbody>

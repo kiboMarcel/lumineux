@@ -1,6 +1,7 @@
 import { Component, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { PasswordFieldComponent } from '../../shared/password-field/password-field.component';
 import { AuthApi } from '../../core/api/auth-api';
 import {
   mustMatchValidator,
@@ -15,7 +16,7 @@ import {
  */
 @Component({
   selector: 'app-reset-password',
-  imports: [ReactiveFormsModule, RouterLink],
+  imports: [ReactiveFormsModule, RouterLink, PasswordFieldComponent],
   template: `
     <div class="lx-auth-shell">
       <div class="lx-card lx-auth-card">
@@ -29,12 +30,12 @@ import {
           <form [formGroup]="form" (ngSubmit)="submit()">
             <div class="lx-field">
               <label for="new">Nouveau mot de passe</label>
-              <input id="new" type="password" formControlName="newPassword" autocomplete="new-password" />
+              <app-password-field id="new" formControlName="newPassword" autocomplete="new-password" />
               <span class="lx-hint">{{ hint }}</span>
             </div>
             <div class="lx-field">
               <label for="confirm">Confirmer</label>
-              <input id="confirm" type="password" formControlName="confirm" autocomplete="new-password" />
+              <app-password-field id="confirm" formControlName="confirm" autocomplete="new-password" />
               @if (form.errors?.['mismatch']) { <span class="lx-error">Les mots de passe ne correspondent pas.</span> }
             </div>
             <button type="submit" class="lx-btn" [disabled]="form.invalid || loading()">

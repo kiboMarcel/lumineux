@@ -22,7 +22,7 @@ interface Geometry { hasData: boolean; points: ChartPoint[]; polyline: string; a
   selector: 'app-time-series-chart',
   template: `
     <div class="lx-card" style="margin-top:1rem;">
-      <div class="lx-topbar" style="border:0; padding:0; margin-bottom:0.75rem;">
+      <div class="lx-page-head" style="margin-bottom:0.75rem;">
         <h2 style="margin:0; font-size:1.1rem;">Évolution de l'affluence</h2>
         <div class="lx-links" style="margin:0;">
           @for (g of granularities; track g.value) {

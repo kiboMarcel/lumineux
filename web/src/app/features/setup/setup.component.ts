@@ -2,6 +2,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { Component, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
+import { PasswordFieldComponent } from '../../shared/password-field/password-field.component';
 import { SetupApi } from '../../core/api/setup-api';
 import { messageForError } from '../../core/http/error-messages';
 import { SessionStore } from '../../core/session/session-store';
@@ -13,7 +14,7 @@ import { passwordPolicyHint, passwordPolicyValidator } from '../../shared/valida
  */
 @Component({
   selector: 'app-setup',
-  imports: [ReactiveFormsModule, RouterLink],
+  imports: [ReactiveFormsModule, RouterLink, PasswordFieldComponent],
   template: `
     <div class="lx-auth-shell">
       <div class="lx-card lx-auth-card">
@@ -38,7 +39,7 @@ import { passwordPolicyHint, passwordPolicyValidator } from '../../shared/valida
           </div>
           <div class="lx-field">
             <label for="password">Mot de passe</label>
-            <input id="password" type="password" formControlName="password" autocomplete="new-password" />
+            <app-password-field id="password" formControlName="password" autocomplete="new-password" />
             <span class="lx-hint">{{ hint }}</span>
           </div>
           <button type="submit" class="lx-btn" [disabled]="form.invalid || loading()">

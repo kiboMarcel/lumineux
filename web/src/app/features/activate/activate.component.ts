@@ -2,6 +2,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { Component, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
+import { PasswordFieldComponent } from '../../shared/password-field/password-field.component';
 import { AuthApi } from '../../core/api/auth-api';
 import { messageForError } from '../../core/http/error-messages';
 import { SessionStore } from '../../core/session/session-store';
@@ -19,7 +20,7 @@ import {
  */
 @Component({
   selector: 'app-activate',
-  imports: [ReactiveFormsModule],
+  imports: [ReactiveFormsModule, PasswordFieldComponent],
   template: `
     <div class="lx-auth-shell">
       <div class="lx-card lx-auth-card">
@@ -35,16 +36,16 @@ import {
           </div>
           <div class="lx-field">
             <label for="temp">Mot de passe temporaire</label>
-            <input id="temp" type="password" formControlName="temporaryPassword" autocomplete="current-password" />
+            <app-password-field id="temp" formControlName="temporaryPassword" autocomplete="current-password" />
           </div>
           <div class="lx-field">
             <label for="new">Nouveau mot de passe</label>
-            <input id="new" type="password" formControlName="newPassword" autocomplete="new-password" />
+            <app-password-field id="new" formControlName="newPassword" autocomplete="new-password" />
             <span class="lx-hint">{{ hint }}</span>
           </div>
           <div class="lx-field">
             <label for="confirm">Confirmer</label>
-            <input id="confirm" type="password" formControlName="confirm" autocomplete="new-password" />
+            <app-password-field id="confirm" formControlName="confirm" autocomplete="new-password" />
             @if (form.errors?.['mismatch']) { <span class="lx-error">Les mots de passe ne correspondent pas.</span> }
             @if (form.errors?.['mustDiffer']) { <span class="lx-error">Le nouveau mot de passe doit différer du temporaire.</span> }
           </div>
