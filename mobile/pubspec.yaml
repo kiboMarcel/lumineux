@@ -30,8 +30,10 @@ dependencies:
   mobile_scanner: ^7.2.0
   permission_handler: ^12.0.3
   # Signal « retour de connectivité » (événementiel, sans polling) pour la
-  # synchronisation hors ligne M2 (feature 027).
-  connectivity_plus: ^7.2.0
+  # synchronisation hors ligne M2 (feature 027). Épinglé en 6.x pour rester
+  # compatible avec la toolchain Android stabilisée (AGP 8.7.3) : la 7.x tire
+  # androidx.core 1.18 qui exige AGP 8.9.1+.
+  connectivity_plus: ^6.1.0
 
 dev_dependencies:
   flutter_test:
