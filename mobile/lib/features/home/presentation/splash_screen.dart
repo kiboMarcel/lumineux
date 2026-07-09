@@ -12,6 +12,12 @@ class SplashScreen extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+            Image(
+              image: AssetImage('assets/images/logo-icon.png'),
+              width: 88,
+              height: 88,
+            ),
+            SizedBox(height: 24),
             CircularProgressIndicator(),
             SizedBox(height: 16),
             Text('Chargement…'),

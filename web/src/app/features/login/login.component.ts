@@ -19,6 +19,12 @@ import { SessionStore } from '../../core/session/session-store';
   template: `
     <div class="lx-auth-shell">
       <div class="lx-card lx-auth-card">
+        <img
+          class="lx-auth-logo"
+          src="logo-lockup-horizontal.svg"
+          alt="Lumineux"
+          style="display:block;height:44px;margin:0 auto 20px;"
+        />
         <h1 class="lx-title">Connexion</h1>
         @if (error()) {
           <div class="lx-alert lx-alert-error" role="alert">{{ error() }}</div>

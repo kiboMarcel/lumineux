@@ -138,19 +138,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   Widget _brand(BuildContext context) {
     return Column(
       children: [
-        Container(
-          width: 64,
-          height: 64,
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            color: AppColors.primary,
-            borderRadius: BorderRadius.circular(20),
-          ),
-          child: const Text(
-            'L',
-            style: TextStyle(
-                color: Colors.white, fontSize: 28, fontWeight: FontWeight.w800),
-          ),
+        const Image(
+          image: AssetImage('assets/images/logo-icon.png'),
+          width: 72,
+          height: 72,
         ),
         const SizedBox(height: 14),
         const Text(

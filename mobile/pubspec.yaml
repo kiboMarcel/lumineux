@@ -45,12 +45,24 @@ dev_dependencies:
   mocktail: ^1.0.4
 
   flutter_lints: ^6.0.0
+  flutter_launcher_icons: ^0.14.4
 
 flutter:
   uses-material-design: true
+
+  assets:
+    - assets/images/
 
   fonts:
     - family: Manrope
       fonts:
         # Police variable (axe wght) — couvre les graisses 400 à 800.
         - asset: assets/fonts/Manrope-Variable.ttf
+
+# Icône de lancement (Android/iOS) générée depuis le visuel fourni (feature 027+).
+# Régénérer après modif : `dart run flutter_launcher_icons`.
+flutter_launcher_icons:
+  image_path: "assets/icon/app-icon-1024.png"
+  android: true
+  ios: true
+  remove_alpha_ios: true
