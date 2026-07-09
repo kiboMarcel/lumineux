@@ -8,6 +8,10 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lumineux_mobile/core/network/token_holder.dart';
 import 'package:lumineux_mobile/core/storage/secure_token_store.dart';
+import 'package:lumineux_mobile/features/attendance/application/camera_permission_facade.dart';
+import 'package:lumineux_mobile/features/attendance/application/providers.dart';
+import 'package:lumineux_mobile/features/attendance/application/scanner_facade.dart';
+import 'package:lumineux_mobile/features/attendance/data/attendance_api.dart';
 import 'package:lumineux_mobile/features/auth/application/providers.dart';
 import 'package:lumineux_mobile/features/auth/data/auth_api.dart';
 import 'package:lumineux_mobile/features/auth/data/auth_dtos.dart';
@@ -16,6 +20,48 @@ import 'package:mocktail/mocktail.dart';
 class MockAuthApi extends Mock implements AuthApi {}
 
 class MockTokenStore extends Mock implements SecureTokenStore {}
+
+class MockAttendanceApi extends Mock implements AttendanceApi {}
+
+/// Scanner substitué en test : la vue est un placeholder ; `emit` simule un code.
+class FakeScannerFacade implements ScannerFacade {
+  void Function(String raw)? _onCode;
+  bool started = false;
+
+  void emit(String raw) => _onCode?.call(raw);
+
+  @override
+  Widget buildPreview({required void Function(String raw) onCode}) {
+    _onCode = onCode;
+    return const SizedBox.shrink();
+  }
+
+  @override
+  Future<void> start() async => started = true;
+
+  @override
+  Future<void> stop() async => started = false;
+
+  @override
+  Future<void> dispose() async {}
+}
+
+/// Permission caméra substituée en test.
+class FakeCameraPermission implements CameraPermissionFacade {
+  FakeCameraPermission({this.granted = true});
+
+  bool granted;
+  bool settingsOpened = false;
+
+  @override
+  Future<bool> isGranted() async => granted;
+
+  @override
+  Future<bool> request() async => granted;
+
+  @override
+  Future<void> openSettings() async => settingsOpened = true;
+}
 
 /// Adapter `dio` renvoyant une réponse figée, et enregistrant la dernière
 /// requête (pour vérifier les en-têtes Bearer).
@@ -72,6 +118,10 @@ ProviderContainer makeContainer({
       authApiProvider.overrideWithValue(api),
       secureTokenStoreProvider.overrideWithValue(store),
       tokenHolderProvider.overrideWithValue(holder ?? TokenHolder()),
+      // Fakes par défaut : rendent `HomeShell` (qui instancie `ScannerScreen`)
+      // montable sans caméra/permission réelles.
+      scannerFacadeProvider.overrideWithValue(FakeScannerFacade()),
+      cameraPermissionProvider.overrideWithValue(FakeCameraPermission()),
     ],
   );
   addTearDown(container.dispose);

@@ -8,14 +8,17 @@ import 'package:lumineux_mobile/core/network/dio_client.dart';
 import '../support/harness.dart';
 
 void main() {
-  group('requiresAuth', () {
-    test('vrai pour les routes protégées', () {
+  group('requiresAuth (liste de refus des routes anonymes)', () {
+    test('vrai pour les routes protégées (dont le scan)', () {
       expect(requiresAuth('/auth/me'), isTrue);
       expect(requiresAuth('/auth/change-password'), isTrue);
+      expect(requiresAuth('/attendance-sessions/5/scan'), isTrue);
     });
-    test('faux pour les routes anonymes', () {
+    test('faux pour les routes d\'authentification anonymes', () {
       expect(requiresAuth('/auth/login'), isFalse);
+      expect(requiresAuth('/auth/activate'), isFalse);
       expect(requiresAuth('/auth/forgot-password'), isFalse);
+      expect(requiresAuth('/auth/reset-password'), isFalse);
     });
   });
 
@@ -50,6 +53,19 @@ void main() {
       final e = mapDioException(dioError(400, {'detail': 'Invalide'}));
       expect(e.type, ApiErrorType.validation);
       expect(e.detail, 'Invalide');
+    });
+    test('404 → notFound', () {
+      final e = mapDioException(dioError(404, {'detail': 'Session introuvable.'}));
+      expect(e.type, ApiErrorType.notFound);
+      expect(e.detail, 'Session introuvable.');
+    });
+    test('409 → conflict', () {
+      expect(mapDioException(dioError(409, {})).type, ApiErrorType.conflict);
+    });
+    test('410 → gone', () {
+      final e = mapDioException(dioError(410, {'detail': 'Code QR expiré'}));
+      expect(e.type, ApiErrorType.gone);
+      expect(e.detail, 'Code QR expiré');
     });
     test('500 → server', () {
       expect(mapDioException(dioError(500, {})).type, ApiErrorType.server);

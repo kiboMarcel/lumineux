@@ -1,4 +1,6 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Scan du QR de séance (feature 026). -->
+    <uses-permission android:name="android.permission.CAMERA" />
     <application
         android:label="lumineux_mobile"
         android:name="${applicationName}"

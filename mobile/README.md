@@ -29,13 +29,17 @@ lib/
 ├── routing/app_router.dart       # go_router + redirection de session (garde)
 └── features/
     ├── auth/{data,application,presentation}   # DTO, AuthApi, SessionController, écrans
-    └── home/presentation                      # accueil + splash
+    ├── attendance/{data,application,presentation}  # scan QR : AttendanceApi, QrPayload,
+    │                                               # ScanController, ScannerScreen, overlay
+    └── home/presentation                      # accueil + scanner + profil (3 onglets) + splash
 ```
 
-- **État & DI** : `flutter_riverpod` (`SessionController`, providers substituables en test).
-- **Navigation** : `go_router` avec redirection globale pilotée par l'état de session.
-- **Réseau** : `dio` (intercepteur Bearer sur routes protégées, mapping d'erreurs centralisé).
+- **État & DI** : `flutter_riverpod` (`SessionController`, `ScanController`, providers substituables en test).
+- **Navigation** : `go_router` (garde de session) + coquille `HomeShell` à **3 onglets** (Accueil, Scanner, Profil).
+- **Réseau** : `dio` (Bearer attaché sauf routes anonymes, mapping d'erreurs centralisé dont 410/409/404 du scan).
 - **Jeton** : `flutter_secure_storage` (Keychain iOS / Keystore Android) — **seul** élément persisté.
+- **Scan QR** : `mobile_scanner` (caméra) + `permission_handler` (permission), tous deux derrière des
+  **façades substituables** en test. Le jeton du QR n'est jamais affiché ni persisté.
 
 ## Configuration d'environnement
 

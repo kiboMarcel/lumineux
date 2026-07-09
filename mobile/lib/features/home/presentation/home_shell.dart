@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/theme/app_colors.dart';
+import '../../attendance/presentation/scanner_screen.dart';
 import 'home_tab.dart';
 import 'profile_tab.dart';
 
 /// Coquille des écrans principaux (post-authentification) : contenu par onglet
-/// + barre de navigation basse. Périmètre membre M0 → 2 onglets (Accueil,
-/// Profil) ; Scanner et Membres relèvent de lots ultérieurs.
+/// + barre de navigation basse. Périmètre membre → 3 onglets (Accueil, Scanner,
+/// Profil) ; les fonctions bureau restent hors de l'app membre.
 class HomeShell extends StatefulWidget {
   const HomeShell({super.key});
 
@@ -17,7 +18,7 @@ class HomeShell extends StatefulWidget {
 class _HomeShellState extends State<HomeShell> {
   int _index = 0;
 
-  static const _tabs = [HomeTab(), ProfileTab()];
+  static const _tabs = [HomeTab(), ScannerScreen(), ProfileTab()];
 
   @override
   Widget build(BuildContext context) {
@@ -58,11 +59,18 @@ class _BottomNav extends StatelessWidget {
                 onTap: () => onSelect(0),
               ),
               _NavItem(
+                itemKey: const Key('nav-scanner'),
+                label: 'Scanner',
+                icon: Icons.qr_code_scanner_rounded,
+                selected: index == 1,
+                onTap: () => onSelect(1),
+              ),
+              _NavItem(
                 itemKey: const Key('nav-profile'),
                 label: 'Profil',
                 icon: Icons.person_rounded,
-                selected: index == 1,
-                onTap: () => onSelect(1),
+                selected: index == 2,
+                onTap: () => onSelect(2),
               ),
             ],
           ),

@@ -5,9 +5,19 @@ import 'package:dio/io.dart';
 
 import 'api_exception.dart';
 
-/// Routes protégées nécessitant l'en-tête `Authorization: Bearer`.
+/// Routes d'authentification **anonymes** : le jeton porteur n'y est PAS attaché.
+const Set<String> _anonymousAuthPaths = {
+  '/auth/login',
+  '/auth/activate',
+  '/auth/forgot-password',
+  '/auth/reset-password',
+};
+
+/// Le jeton porteur est attaché à **toutes** les routes **sauf** les routes
+/// d'authentification anonymes (liste de refus) : `me`, `change-password`,
+/// `attendance-sessions/**/scan` et tout futur endpoint protégé le reçoivent.
 bool requiresAuth(String path) =>
-    path.contains('/auth/me') || path.contains('/auth/change-password');
+    !_anonymousAuthPaths.any((anon) => path.contains(anon));
 
 /// Convertit une [DioException] en [ApiException] typée (mapping centralisé
 /// FR-004/005). Lit `code`/`title`/`detail` du `ProblemDetails` (RFC 7807),
@@ -65,6 +75,18 @@ ApiException mapDioException(DioException e) {
   }
   if (status == 400) {
     return ApiException(ApiErrorType.validation,
+        statusCode: status, code: code, title: title, detail: detail);
+  }
+  if (status == 404) {
+    return ApiException(ApiErrorType.notFound,
+        statusCode: status, code: code, title: title, detail: detail);
+  }
+  if (status == 409) {
+    return ApiException(ApiErrorType.conflict,
+        statusCode: status, code: code, title: title, detail: detail);
+  }
+  if (status == 410) {
+    return ApiException(ApiErrorType.gone,
         statusCode: status, code: code, title: title, detail: detail);
   }
   if (status >= 500) {

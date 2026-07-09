@@ -51,7 +51,9 @@ export class QrPanelComponent implements OnInit, OnDestroy {
   private fetch(): void {
     this.sessionsApi.qr(this.sessionId()).subscribe({
       next: (res) => {
-        this.qrData.set(res.token);
+        // Charge versionnée consommée par l'app mobile (feature 026) :
+        // { v, s (sessionId), t (jeton) }. Le jeton n'est jamais rendu en texte.
+        this.qrData.set(JSON.stringify({ v: 1, s: this.sessionId(), t: res.token }));
         this.errorState.set(false);
         // Regénérer AVANT expiration : petite marge sur le pas de rotation.
         const delayMs = Math.max((res.stepSeconds - 1) * 1000, 1000);

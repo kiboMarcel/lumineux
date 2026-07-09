@@ -32,7 +32,8 @@ describe('QrPanelComponent (US1 — QR rotatif)', () => {
     sessionsApi.qr.mockReturnValue(of({ token: 'tok-1', stepSeconds: 30, expiresAt: '2026-07-05T10:00:30Z' }));
     const fixture = createPanel();
     fixture.componentInstance.ngOnInit();
-    expect(fixture.componentInstance.qrData()).toBe('tok-1');
+    // Charge versionnée consommée par le mobile (feature 026) : { v, s, t }.
+    expect(fixture.componentInstance.qrData()).toBe('{"v":1,"s":7,"t":"tok-1"}');
     expect(setItem).not.toHaveBeenCalled();
   });
 
@@ -43,11 +44,11 @@ describe('QrPanelComponent (US1 — QR rotatif)', () => {
       .mockReturnValueOnce(of({ token: 'tok-2', stepSeconds: 30, expiresAt: '' }));
     const comp = createPanel().componentInstance;
     comp.ngOnInit();
-    expect(comp.qrData()).toBe('tok-1');
+    expect(comp.qrData()).toBe('{"v":1,"s":7,"t":"tok-1"}');
     // Avant l'expiration (30 s), un nouveau jeton est récupéré.
     vi.advanceTimersByTime(29_000);
     expect(sessionsApi.qr).toHaveBeenCalledTimes(2);
-    expect(comp.qrData()).toBe('tok-2');
+    expect(comp.qrData()).toBe('{"v":1,"s":7,"t":"tok-2"}');
   });
 
   it('arrête le cycle de rotation à la destruction (pas de fuite de timer)', () => {

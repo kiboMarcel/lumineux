@@ -12,6 +12,15 @@ enum ApiErrorType {
   /// 400 — validation (ProblemDetails RFC 7807).
   validation,
 
+  /// 404 — ressource introuvable (séance introuvable au scan).
+  notFound,
+
+  /// 409 — conflit (séance close au scan).
+  conflict,
+
+  /// 410 — ressource expirée (jeton QR périmé au scan).
+  gone,
+
   /// Timeout / hors ligne / erreur de connexion.
   network,
 

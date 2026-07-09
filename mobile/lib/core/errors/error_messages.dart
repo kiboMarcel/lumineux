@@ -36,6 +36,14 @@ String messageForApiException(
       return e.detail ?? e.title ?? 'Accès refusé.';
     case ApiErrorType.validation:
       return e.detail ?? e.title ?? 'Données invalides.';
+    case ApiErrorType.gone:
+      // Jeton QR périmé (scan). Le serveur fournit un message FR orienté action.
+      return e.detail ?? e.title ?? 'Code QR expiré : scannez le code affiché actuellement.';
+    case ApiErrorType.conflict:
+      // Séance close (scan).
+      return e.detail ?? e.title ?? 'La réunion est terminée : enregistrement impossible.';
+    case ApiErrorType.notFound:
+      return e.detail ?? e.title ?? 'Séance introuvable.';
     case ApiErrorType.unknown:
       return e.detail ?? e.title ?? 'Une erreur est survenue.';
   }
