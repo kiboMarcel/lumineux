@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:lumineux_mobile/core/network/api_exception.dart';
 import 'package:lumineux_mobile/features/attendance/application/providers.dart';
 import 'package:lumineux_mobile/features/attendance/application/scan_state.dart';
+import 'package:lumineux_mobile/features/auth/application/providers.dart';
 import 'package:mocktail/mocktail.dart';
 
 import '../../support/harness.dart';
@@ -16,7 +17,13 @@ void main() {
   setUp(() {
     api = MockAttendanceApi();
     container = ProviderContainer(
-      overrides: [attendanceApiProvider.overrideWithValue(api)],
+      overrides: [
+        attendanceApiProvider.overrideWithValue(api),
+        // Feature 027 : le chemin réseau capture hors ligne → coffre en mémoire.
+        secureStorageProvider.overrideWithValue(inMemorySecureStorage()),
+        clockProvider
+            .overrideWithValue(FixedClock(DateTime.utc(2026, 7, 9, 14))),
+      ],
     );
     addTearDown(container.dispose);
   });
@@ -72,14 +79,18 @@ void main() {
     expect(state().result, isNull);
   });
 
-  test('réseau → overlay erreur « Réseau indisponible »', () async {
+  test('réseau → capture hors ligne (feature 027, FR-004), pas une erreur',
+      () async {
     await scanning();
     when(() => api.scan(123, 'tok'))
         .thenThrow(const ApiException(ApiErrorType.network));
 
     await container.read(scanControllerProvider.notifier).onDetect(_validQr);
 
-    expect(state().result!.subtitle, contains('Réseau indisponible'));
+    expect(state().result!.kind, ScanResultKind.offlineQueued);
+    expect(state().result!.isError, isFalse);
+    expect(await container.read(offlineQueueStoreProvider).readAll(),
+        hasLength(1));
   });
 
   test('payload non reconnu → indice transitoire, aucun appel API', () async {

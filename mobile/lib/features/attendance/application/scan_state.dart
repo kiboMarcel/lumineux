@@ -4,7 +4,8 @@ import '../data/scan_dtos.dart';
 enum ScanStatus { permissionUnknown, permissionDenied, scanning, submitting, result }
 
 /// Nature d'un résultat présenté dans l'overlay modal.
-enum ScanResultKind { success, alreadyPresent, error }
+/// [offlineQueued] : capture mise en file hors ligne (feature 027, ton neutre).
+enum ScanResultKind { success, alreadyPresent, offlineQueued, error }
 
 /// Contenu de l'overlay de résultat (aller-retour API uniquement).
 class ScanResultView {
@@ -29,6 +30,16 @@ class ScanResultView {
 
   factory ScanResultView.error(String message) =>
       ScanResultView(ScanResultKind.error, 'Échec du scan', message);
+
+  /// Capture hors ligne réussie (feature 027, FR-001). [alreadyQueued] signale
+  /// un re-scan d'une séance déjà en file (dédup FR-014) — ton neutre, jamais
+  /// une erreur.
+  factory ScanResultView.offlineQueued({bool alreadyQueued = false}) =>
+      ScanResultView(
+        ScanResultKind.offlineQueued,
+        alreadyQueued ? 'Déjà capturée hors ligne' : 'Enregistrée hors ligne',
+        'À synchroniser dès le retour du réseau',
+      );
 }
 
 /// État applicatif de l'écran Scanner (non persisté).

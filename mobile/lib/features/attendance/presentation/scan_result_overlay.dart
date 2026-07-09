@@ -19,9 +19,23 @@ class ScanResultOverlay extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isError = result.isError;
-    final Color badgeBg = isError ? AppColors.dangerSoft : AppColors.successSoft;
-    final Color badgeFg = isError ? AppColors.danger : AppColors.success;
-    final IconData icon = isError ? Icons.error_outline : Icons.check;
+    final isOffline = result.kind == ScanResultKind.offlineQueued;
+    // Hors ligne : ton neutre (indigo) — ce n'est pas une erreur (FR-001).
+    final Color badgeBg = isError
+        ? AppColors.dangerSoft
+        : isOffline
+            ? AppColors.primarySoft
+            : AppColors.successSoft;
+    final Color badgeFg = isError
+        ? AppColors.danger
+        : isOffline
+            ? AppColors.primary
+            : AppColors.success;
+    final IconData icon = isError
+        ? Icons.error_outline
+        : isOffline
+            ? Icons.cloud_off_outlined
+            : Icons.check;
 
     return Positioned.fill(
       child: ColoredBox(

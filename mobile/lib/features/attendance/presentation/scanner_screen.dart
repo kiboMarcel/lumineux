@@ -8,6 +8,7 @@ import '../application/providers.dart';
 import '../application/scan_state.dart';
 import '../application/scanner_facade.dart';
 import 'scan_result_overlay.dart';
+import 'sync_status_banner.dart';
 
 /// Onglet Scanner : aperçu caméra + cadre de visée, détection du QR de séance,
 /// overlay de résultat, gestion de la permission et du cycle de vie caméra.
@@ -30,7 +31,13 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen>
     _facade = ref.read(scannerFacadeProvider);
     _permission = ref.read(cameraPermissionProvider);
     WidgetsBinding.instance.addObserver(this);
-    WidgetsBinding.instance.addPostFrameCallback((_) => _resolvePermission());
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _resolvePermission();
+      // Déclencheur « lancement » : tenter de synchroniser les captures en
+      // attente dès l'ouverture (FR-006). Instancie aussi le SyncController
+      // (abonnement connectivité).
+      ref.read(syncControllerProvider.notifier).syncNow();
+    });
   }
 
   @override
@@ -52,6 +59,8 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen>
       } else if (status == ScanStatus.scanning) {
         _facade.start();
       }
+      // Déclencheur « reprise » : nouvelle tentative de synchro (FR-006).
+      ref.read(syncControllerProvider.notifier).syncNow();
     }
   }
 
@@ -97,6 +106,8 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen>
                   color: AppColors.ink),
             ),
           ),
+          // Indicateur de synchro hors ligne (FR-011) : masqué si rien en attente.
+          const SyncStatusBanner(),
           Expanded(child: _body(scan)),
         ],
       ),
