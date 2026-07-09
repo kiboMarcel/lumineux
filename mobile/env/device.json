@@ -1,0 +1,4 @@
+{
+  "API_BASE_URL": "https://192.168.2.12:4311",
+  "IS_DEV": true
+}

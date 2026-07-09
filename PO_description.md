@@ -248,3 +248,98 @@ incréments, à spécifier via `/speckit-specify` (l'API d'abord, comme pour 007
   l'UI.
 - **SC-I3** : l'endpoint de statut ne renvoie **qu'un booléen** (aucune donnée sensible) et est
   consultable **sans authentification**.
+
+---
+
+## 13. Nouveau produit — Application mobile membre (Flutter) — 2026-07-07
+
+> **Changement de posture** : jusqu'ici ce document cadre la **console web bureau** (SPA). À partir d'ici,
+> on ouvre un **second client**, distinct et complémentaire : l'**application mobile du membre**, en
+> **Flutter**, qui « ferme la boucle » de la présence. Le bureau **projette** le QR rotatif (feature 014,
+> SPA) ; le membre le **scanne** avec son téléphone pour **marquer sa présence**. Ce client vit dans le
+> **mono-dépôt** (nouveau dossier `mobile/`) et consomme **l'API existante** (aucune règle métier
+> dupliquée). Ordre de livraison prévu (voir backlog piste I) : **M0 socle & compte** → M1 scan QR →
+> M2 sync hors ligne → M3 tableau de bord membre réduit.
+
+### Vision (mobile)
+Donner à **chaque membre** un moyen **simple, rapide et sûr** de **prouver sa présence** en séance :
+il ouvre l'app, s'authentifie une fois, **scanne** le code projeté, et voit **immédiatement** la
+confirmation. L'expérience est pensée pour le **terrain** (salle de réunion, réseau incertain), en
+**français**, sur son propre téléphone. L'API reste l'**unique autorité** (validation du jeton QR,
+règles de présence, droits).
+
+### Persona cible
+**Membre (compte simple)** — *aucun droit de gestion*. Il ne gère ni membres, ni profils, ni sessions ;
+il **consomme** son compte et **marque sa présence**. (Les responsables de bureau restent sur la SPA.)
+
+---
+
+### Feature M0 (PREMIÈRE) — Socle mobile & cycle de vie du compte membre
+
+#### Contexte & manque
+Il n'existe **aucun** client mobile aujourd'hui. Avant tout scan (M1), le membre doit pouvoir **installer
+l'app, s'authentifier et gérer son mot de passe** en toute sécurité depuis son téléphone. Tous les
+endpoints nécessaires **existent déjà** côté API (auth **003**, mot de passe oublié/reset **006**,
+identité **007**) : ce lot **ne requiert aucune évolution d'API**.
+
+#### Objectif
+Poser le **socle technique** de l'app Flutter (`mobile/`) et livrer le **cycle de vie complet du compte
+membre** sur mobile, avec une **gestion sécurisée du jeton**, prêt à accueillir le scan (M1).
+
+#### Périmètre (mobile uniquement)
+1. **Amorçage de l'app Flutter** dans `mobile/` : structure de projet, navigation (pile d'écrans /
+   routeur), thème sobre en **français**, configuration d'environnement (URL de base de l'API par
+   profil dev/prod).
+2. **Accès réseau encapsulé** : un client HTTP dédié avec **intercepteur Bearer** (ajout du jeton),
+   **gestion centralisée des erreurs** (401 → purge + retour connexion ; 403 ; validation ; réseau
+   indisponible → message clair), et **mapping des `ProblemDetails`/codes métier** vers des messages
+   compréhensibles (ex. `password_change_required`).
+3. **Stockage sécurisé du jeton** : conservation via le **coffre sécurisé de l'OS** (Keychain iOS /
+   Keystore Android), **jamais** en clair ni dans des logs ; effacement à la déconnexion et sur 401.
+4. **Écrans du cycle de vie du compte** :
+   - **Connexion** (référence / identifiant + mot de passe → jeton).
+   - **Activation à la 1re connexion** (mot de passe temporaire → nouveau mot de passe) — déclenchée par
+     le code métier `password_change_required`.
+   - **Mot de passe oublié** (envoi générique **anti-énumération**) + **réinitialisation** (saisie du
+     jeton reçu par e-mail + nouveau mot de passe).
+   - **Changement de mot de passe** (utilisateur connecté).
+   - **Déconnexion** (purge de l'état et du jeton).
+5. **Politique de mot de passe alignée sur l'API** (longueur min., lettre + chiffre) avec retour de
+   validation immédiat.
+
+#### Contraintes
+- **Français**, ergonomie mobile (cibles tactiles, claviers adaptés, états chargement/erreur/vide).
+- **Sécurité (défense en profondeur)** : jeton dans le **coffre sécurisé** uniquement ; **aucun secret**
+  (mot de passe, jeton, mot de passe temporaire) journalisé ou affiché en clair au-delà du strict
+  nécessaire ; **HTTPS** exclusivement ; messages **anti-énumération** conservés (mot de passe oublié).
+- **Aucune règle métier dupliquée** : l'API valide identifiants, activation et réinitialisation ; l'app
+  **présente** et **orchestre**. L'API reste l'autorité (401/403).
+- **Aucune évolution d'API** dans ce lot.
+
+#### Hors périmètre (M0)
+- Le **scan QR** et le marquage de présence (feature **M1**).
+- La **capture hors ligne** et la synchronisation par lot (feature **M2**).
+- Le **tableau de bord membre** / historique de présences (feature **M3**, prérequis API probable).
+- La consultation de la fiche membre (cf. §9.6, endpoint à créer — évolution ouverte).
+- Toute fonction de **gestion** (membres, profils, présences) réservée à la SPA bureau.
+
+#### Dépendance outillage (à traiter au `/speckit-implement`)
+L'implémentation nécessitera le **Flutter SDK** installé sur le poste (téléchargement réseau à
+**approuver** conformément aux règles projet). La spécification et le plan (`/speckit-specify`,
+`/speckit-plan`) ne requièrent **aucune** installation.
+
+#### Critères de succès
+- **SC-M0-1** : un membre nouvellement provisionné peut, **depuis son téléphone et sans assistance**,
+  activer son compte (mot de passe temporaire → nouveau) puis se connecter.
+- **SC-M0-2** : le parcours « mot de passe oublié → e-mail → réinitialisation → connexion » est
+  réalisable **de bout en bout** depuis l'app.
+- **SC-M0-3** : le **jeton** n'est **jamais** observable en clair (logs, stockage non sécurisé) ; il est
+  purgé à la déconnexion et à l'expiration (401).
+- **SC-M0-4** : à l'expiration du jeton, l'app **purge** l'état et **ramène à la connexion** avec un
+  message clair, sans blocage.
+
+#### Séquencement (piste I du backlog)
+**M0 socle & compte** (ce lot) → **M1 scan QR** (décision à trancher : le QR de 014 encode aujourd'hui le
+seul token ; le scan a besoin du `sessionId` → adapter la qr-panel ou la convention) → **M2 sync hors
+ligne** (`scan/batch`, idempotence `ClientOperationId`) → **M3 tableau de bord membre réduit**
+(prérequis API « mes présences » probable).

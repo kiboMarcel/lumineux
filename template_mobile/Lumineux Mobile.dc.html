@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <meta name="design_doc_mode" content="canvas">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    body { margin: 0; background: #F1ECE3; font-family: 'Manrope', system-ui, sans-serif; }
+    a { color: #3B4FCC; text-decoration: none; }
+    a:hover { color: #2C3AA0; text-decoration: underline; }
+    ::-webkit-scrollbar { width: 0; height: 0; }
+  </style>
+</helmet>
+
+<div style="min-height: 100vh; display: flex; align-items: center; justify-content: center; gap: 48px; padding: 64px 32px; box-sizing: border-box; flex-wrap: wrap;">
+
+  <div style="display: flex; flex-direction: column; align-items: center; gap: 18px;">
+    <div style="font-size: 13px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #8A8478;">Lumineux &middot; template mobile</div>
+    <x-import component-from-global-scope="AndroidDevice" from="./android-frame.jsx" hint-size="412,892">
+      <div style="height: 100%; display: flex; flex-direction: column; position: relative; background: #FAF7F2; font-family: 'Manrope', system-ui, sans-serif;">
+
+        <sc-if value="{{ isLogin }}" hint-placeholder-val="{{ true }}">
+          <div style="flex: 1; display: flex; flex-direction: column; justify-content: center; padding: 32px 28px; gap: 28px; box-sizing: border-box;">
+            <div style="display: flex; flex-direction: column; align-items: center; gap: 14px;">
+              <div style="width: 64px; height: 64px; border-radius: 20px; background: #3B4FCC; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 28px; font-weight: 800;">L</div>
+              <div style="font-size: 24px; font-weight: 800; color: #221F1A;">Lumineux</div>
+              <div style="font-size: 14px; color: #6B675F;">Gestion des présences</div>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 14px;">
+              <div style="display: flex; flex-direction: column; gap: 6px;">
+                <label style="font-size: 13px; font-weight: 600; color: #221F1A;">Identifiant</label>
+                <div style="height: 48px; border-radius: 12px; border: 1px solid #ECE7DE; background: #fff; display: flex; align-items: center; padding: 0 14px; font-size: 15px; color: #221F1A;">LMX-2024-0187</div>
+              </div>
+              <div style="display: flex; flex-direction: column; gap: 6px;">
+                <label style="font-size: 13px; font-weight: 600; color: #221F1A;">Mot de passe</label>
+                <div style="height: 48px; border-radius: 12px; border: 1px solid #ECE7DE; background: #fff; display: flex; align-items: center; padding: 0 14px; font-size: 20px; letter-spacing: 3px; color: #221F1A;">&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;</div>
+              </div>
+              <div onClick="{{ doLogin }}" style="height: 50px; border-radius: 12px; background: #3B4FCC; color: #fff; font-size: 15px; font-weight: 700; display: flex; align-items: center; justify-content: center; cursor: pointer; margin-top: 6px;" style-hover="background: #2C3AA0;">Se connecter</div>
+              <div style="text-align: center; font-size: 13px; color: #3B4FCC; cursor: pointer;">Mot de passe oublié ?</div>
+            </div>
+            <div style="display: flex; align-items: center; gap: 10px; color: #8A8478; font-size: 12px;">
+              <div style="flex: 1; height: 1px; background: #ECE7DE;"></div>
+              Première connexion
+              <div style="flex: 1; height: 1px; background: #ECE7DE;"></div>
+            </div>
+            <div onClick="{{ goActivate }}" style="height: 48px; border-radius: 12px; border: 1.5px solid #3B4FCC; color: #3B4FCC; font-size: 14px; font-weight: 700; display: flex; align-items: center; justify-content: center; cursor: pointer;">Activer mon compte</div>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ isActivate }}">
+          <div style="flex: 1; display: flex; flex-direction: column; box-sizing: border-box;">
+            <div style="display: flex; align-items: center; gap: 12px; padding: 18px 20px 6px;">
+              <div onClick="{{ goLogin }}" style="width: 32px; height: 32px; border-radius: 10px; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 18px; color: #221F1A;">&larr;</div>
+              <div style="font-size: 18px; font-weight: 700; color: #221F1A;">Activer votre compte</div>
+            </div>
+            <div style="padding: 8px 24px 24px; display: flex; flex-direction: column; gap: 16px;">
+              <div style="font-size: 14px; color: #6B675F; line-height: 1.5;">Utilisez le mot de passe temporaire reçu par e-mail pour définir votre nouveau mot de passe.</div>
+              <div style="display: flex; flex-direction: column; gap: 6px;">
+                <label style="font-size: 13px; font-weight: 600; color: #221F1A;">Mot de passe temporaire</label>
+                <div style="height: 48px; border-radius: 12px; border: 1px solid #ECE7DE; background: #fff; display: flex; align-items: center; padding: 0 14px; font-size: 15px; color: #221F1A;">Th7&bull;&bull;&bull;&bull;&bull;</div>
+              </div>
+              <div style="display: flex; flex-direction: column; gap: 6px;">
+                <label style="font-size: 13px; font-weight: 600; color: #221F1A;">Nouveau mot de passe</label>
+                <div style="height: 48px; border-radius: 12px; border: 1px solid #ECE7DE; background: #fff; display: flex; align-items: center; padding: 0 14px; font-size: 20px; letter-spacing: 3px; color: #221F1A;">&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;</div>
+              </div>
+              <div style="display: flex; flex-direction: column; gap: 6px;">
+                <label style="font-size: 13px; font-weight: 600; color: #221F1A;">Confirmer le mot de passe</label>
+                <div style="height: 48px; border-radius: 12px; border: 1px solid #ECE7DE; background: #fff; display: flex; align-items: center; padding: 0 14px; font-size: 20px; letter-spacing: 3px; color: #221F1A;">&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;</div>
+              </div>
+              <div style="display: flex; flex-direction: column; gap: 8px; background: #F1ECE3; border-radius: 12px; padding: 12px 14px;">
+                <div style="font-size: 12px; font-weight: 700; color: #6B675F; text-transform: uppercase; letter-spacing: 0.04em;">Exigences</div>
+                <div style="font-size: 13px; color: #221F1A;">&#10003; 8 caractères minimum</div>
+                <div style="font-size: 13px; color: #221F1A;">&#10003; Une majuscule et un chiffre</div>
+              </div>
+              <div onClick="{{ doActivate }}" style="height: 50px; border-radius: 12px; background: #3B4FCC; color: #fff; font-size: 15px; font-weight: 700; display: flex; align-items: center; justify-content: center; cursor: pointer; margin-top: 4px;">Activer mon compte</div>
+            </div>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ isApp }}">
+          <div style="flex: 1; display: flex; flex-direction: column; min-height: 0; box-sizing: border-box;">
+            <div style="flex: 1; overflow: auto; min-height: 0;">
+
+              <sc-if value="{{ isQrScreen }}">
+                <div>
+                  <div style="display: flex; align-items: center; gap: 12px; padding: 18px 20px 4px;">
+                    <div onClick="{{ closeQr }}" style="width: 32px; height: 32px; border-radius: 10px; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 18px; color: #221F1A;">&larr;</div>
+                    <div style="flex: 1; min-width: 0;">
+                      <div style="font-size: 17px; font-weight: 700; color: #221F1A;">Session — Antenne Centre</div>
+                      <div style="font-size: 12px; color: #6B675F;">Ouverte depuis 14:02</div>
+                    </div>
+                  </div>
+                  <div style="padding: 16px 24px 8px; display: flex; flex-direction: column; align-items: center; gap: 16px;">
+                    <div style="width: 220px; height: 220px; border-radius: 20px; background: repeating-linear-gradient(45deg, #E7E9FB, #E7E9FB 8px, #FFFFFF 8px, #FFFFFF 16px); border: 1.5px solid #ECE7DE; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 6px;">
+                      <div style="font-family: monospace; font-size: 12px; letter-spacing: 0.08em; color: #3B4FCC; background: #fff; padding: 4px 10px; border-radius: 6px;">QR CODE SESSION</div>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 8px; font-size: 13px; color: #6B675F;">
+                      <div style="width: 26px; height: 26px; border-radius: 50%; border: 3px solid #3B4FCC; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; color: #3B4FCC;">{{ qrSeconds }}</div>
+                      Renouvellement automatique
+                    </div>
+                    <div style="display: flex; gap: 10px; width: 100%;">
+                      <div style="flex: 1; background: #fff; border: 1px solid #ECE7DE; border-radius: 14px; padding: 14px; text-align: center;">
+                        <div style="font-size: 22px; font-weight: 800; color: #221F1A;">{{ liveScans.length }}</div>
+                        <div style="font-size: 12px; color: #6B675F;">présences</div>
+                      </div>
+                      <div style="flex: 1; background: #fff; border: 1px solid #ECE7DE; border-radius: 14px; padding: 14px; text-align: center;">
+                        <div style="font-size: 22px; font-weight: 800; color: #221F1A;">42</div>
+                        <div style="font-size: 12px; color: #6B675F;">attendus</div>
+                      </div>
+                    </div>
+                  </div>
+                  <div style="padding: 12px 24px 4px; font-size: 13px; font-weight: 700; color: #221F1A; text-transform: uppercase; letter-spacing: 0.04em;">Derniers pointages</div>
+                  <sc-for list="{{ liveScans }}" as="s" hint-placeholder-count="4">
+                    <div style="display: flex; align-items: center; gap: 12px; padding: 10px 24px;">
+                      <div style="width: 34px; height: 34px; border-radius: 50%; background: #D97A3F; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; flex-shrink: 0;">{{ s.initials }}</div>
+                      <div style="flex: 1; font-size: 14px; color: #221F1A;">{{ s.name }}</div>
+                      <div style="font-size: 12px; color: #6B675F;">{{ s.time }}</div>
+                    </div>
+                  </sc-for>
+                  <div style="height: 90px;"></div>
+                  <div onClick="{{ closeSession }}" style="position: absolute; left: 20px; right: 20px; bottom: 20px; height: 48px; border-radius: 12px; border: 1.5px solid #C1483A; color: #C1483A; font-size: 14px; font-weight: 700; display: flex; align-items: center; justify-content: center; cursor: pointer; background: #FAF7F2;">Clôturer la session</div>
+                </div>
+              </sc-if>
+
+              <sc-if value="{{ isTabHome }}">
+                <div style="padding: 20px 20px 12px;">
+                  <div style="display: flex; align-items: center; justify-content: space-between;">
+                    <div>
+                      <div style="font-size: 20px; font-weight: 800; color: #221F1A;">Bonjour, Aline</div>
+                      <div style="font-size: 13px; color: #6B675F;">Antenne Centre</div>
+                    </div>
+                    <div style="background: #FBE7D6; color: #B85C22; font-size: 12px; font-weight: 700; padding: 6px 12px; border-radius: 100px;">{{ roleLabel }}</div>
+                  </div>
+                </div>
+
+                <sc-if value="{{ isBureau }}">
+                  <div style="margin: 4px 20px 8px; background: #3B4FCC; border-radius: 18px; padding: 18px; color: #fff; display: flex; flex-direction: column; gap: 12px;">
+                    <sc-if value="{{ sessionOpen }}">
+                      <div>
+                        <div style="font-size: 15px; font-weight: 700;">Session ouverte</div>
+                        <div style="font-size: 12px; opacity: 0.8;">Antenne Centre &middot; depuis 14:02</div>
+                      </div>
+                      <div onClick="{{ openQr }}" style="height: 42px; border-radius: 10px; background: #fff; color: #3B4FCC; font-size: 14px; font-weight: 700; display: flex; align-items: center; justify-content: center; cursor: pointer;">Afficher le QR</div>
+                    </sc-if>
+                    <sc-if value="{{ sessionClosed }}">
+                      <div>
+                        <div style="font-size: 15px; font-weight: 700;">Aucune session ouverte</div>
+                        <div style="font-size: 12px; opacity: 0.8;">Démarrez une réunion pour pointer les présences.</div>
+                      </div>
+                      <div onClick="{{ startSession }}" style="height: 42px; border-radius: 10px; background: #fff; color: #3B4FCC; font-size: 14px; font-weight: 700; display: flex; align-items: center; justify-content: center; cursor: pointer;">Démarrer une session</div>
+                    </sc-if>
+                  </div>
+                </sc-if>
+
+                <div style="padding: 8px 20px 4px; font-size: 13px; font-weight: 700; color: #221F1A; text-transform: uppercase; letter-spacing: 0.04em;">Mes présences récentes</div>
+                <sc-for list="{{ recentAttendance }}" as="a" hint-placeholder-count="3">
+                  <div style="display: flex; align-items: center; gap: 12px; margin: 6px 20px; background: #fff; border: 1px solid #ECE7DE; border-radius: 14px; padding: 12px 14px;">
+                    <div style="flex: 1;">
+                      <div style="font-size: 14px; font-weight: 600; color: #221F1A;">{{ a.label }}</div>
+                      <div style="font-size: 12px; color: #6B675F;">{{ a.date }} &middot; {{ a.time }}</div>
+                    </div>
+                    <div style="font-size: 12px; font-weight: 700; padding: 4px 10px; border-radius: 100px; background: {{ a.badgeBg }}; color: {{ a.badgeFg }};">{{ a.status }}</div>
+                  </div>
+                </sc-for>
+                <div style="height: 12px;"></div>
+              </sc-if>
+
+              <sc-if value="{{ isTabScanner }}">
+                <div style="padding: 20px 20px 4px; font-size: 20px; font-weight: 800; color: #221F1A;">Scanner</div>
+                <div style="padding: 24px; display: flex; flex-direction: column; align-items: center; gap: 20px;">
+                  <div style="position: relative; width: 240px; height: 240px; background: #221F1A; border-radius: 24px; overflow: hidden;">
+                    <div style="position: absolute; top: 18px; left: 18px; width: 28px; height: 28px; border-top: 3px solid #fff; border-left: 3px solid #fff; border-radius: 6px 0 0 0;"></div>
+                    <div style="position: absolute; top: 18px; right: 18px; width: 28px; height: 28px; border-top: 3px solid #fff; border-right: 3px solid #fff; border-radius: 0 6px 0 0;"></div>
+                    <div style="position: absolute; bottom: 18px; left: 18px; width: 28px; height: 28px; border-bottom: 3px solid #fff; border-left: 3px solid #fff; border-radius: 0 0 0 6px;"></div>
+                    <div style="position: absolute; bottom: 18px; right: 18px; width: 28px; height: 28px; border-bottom: 3px solid #fff; border-right: 3px solid #fff; border-radius: 0 0 6px 0;"></div>
+                  </div>
+                  <div style="font-size: 14px; color: #6B675F; text-align: center;">Placez le code QR de la session dans le cadre</div>
+                  <div onClick="{{ simulateScan }}" style="height: 48px; width: 100%; border-radius: 12px; background: #3B4FCC; color: #fff; font-size: 14px; font-weight: 700; display: flex; align-items: center; justify-content: center; cursor: pointer;">Simuler un scan</div>
+                </div>
+              </sc-if>
+
+              <sc-if value="{{ isTabMembers }}">
+                <div style="padding: 20px 20px 4px; font-size: 20px; font-weight: 800; color: #221F1A;">Membres</div>
+                <div style="padding: 12px 20px 8px;">
+                  <div style="height: 44px; border-radius: 12px; background: #fff; border: 1px solid #ECE7DE; display: flex; align-items: center; padding: 0 14px; gap: 10px; font-size: 14px; color: #6B675F;">
+                    <div style="width: 16px; height: 16px; border: 2px solid #6B675F; border-radius: 50%;"></div>
+                    Rechercher un membre&hellip;
+                  </div>
+                </div>
+                <div style="display: flex; gap: 8px; padding: 0 20px 12px; overflow-x: auto;">
+                  <div style="padding: 7px 14px; border-radius: 100px; background: #3B4FCC; color: #fff; font-size: 12px; font-weight: 700; white-space: nowrap;">Toutes antennes</div>
+                  <div style="padding: 7px 14px; border-radius: 100px; background: #fff; border: 1px solid #ECE7DE; color: #6B675F; font-size: 12px; font-weight: 600; white-space: nowrap;">Centre</div>
+                  <div style="padding: 7px 14px; border-radius: 100px; background: #fff; border: 1px solid #ECE7DE; color: #6B675F; font-size: 12px; font-weight: 600; white-space: nowrap;">Nord</div>
+                </div>
+                <sc-for list="{{ members }}" as="m" hint-placeholder-count="6">
+                  <div onClick="{{ m.onSelect }}" style="display: flex; align-items: center; gap: 12px; padding: 10px 20px; cursor: pointer;">
+                    <div style="width: 40px; height: 40px; border-radius: 50%; background: #D97A3F; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 700; flex-shrink: 0;">{{ m.initials }}</div>
+                    <div style="flex: 1; min-width: 0;">
+                      <div style="font-size: 14px; font-weight: 600; color: #221F1A;">{{ m.name }}</div>
+                      <div style="font-size: 12px; color: #6B675F;">{{ m.antenne }} &middot; {{ m.status }}</div>
+                    </div>
+                    <div style="color: #ADA89D; font-size: 16px;">&rsaquo;</div>
+                  </div>
+                </sc-for>
+              </sc-if>
+
+              <sc-if value="{{ isTabProfile }}">
+                <div style="padding: 20px; display: flex; flex-direction: column; align-items: center; gap: 8px;">
+                  <div style="width: 76px; height: 76px; border-radius: 50%; background: #3B4FCC; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 26px; font-weight: 700;">AK</div>
+                  <div style="font-size: 18px; font-weight: 800; color: #221F1A;">Aline Kouadio</div>
+                  <div style="font-size: 13px; color: #6B675F;">LMX-2024-0187 &middot; Antenne Centre</div>
+                </div>
+                <div style="margin: 8px 20px; background: #fff; border: 1px solid #ECE7DE; border-radius: 16px; padding: 16px;">
+                  <div style="font-size: 12px; font-weight: 700; color: #6B675F; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 10px;">Aperçu du rôle (démo)</div>
+                  <div style="display: flex; background: #F1ECE3; border-radius: 100px; padding: 4px;">
+                    <div onClick="{{ setRoleMember }}" style="flex: 1; text-align: center; padding: 8px 0; border-radius: 100px; font-size: 13px; font-weight: 700; cursor: pointer; background: {{ memberPillBg }}; color: {{ memberPillFg }};">Membre</div>
+                    <div onClick="{{ setRoleBureau }}" style="flex: 1; text-align: center; padding: 8px 0; border-radius: 100px; font-size: 13px; font-weight: 700; cursor: pointer; background: {{ bureauPillBg }}; color: {{ bureauPillFg }};">Bureau</div>
+                  </div>
+                </div>
+                <div style="margin: 8px 20px; background: #fff; border: 1px solid #ECE7DE; border-radius: 16px; padding: 6px 16px;">
+                  <div style="font-size: 12px; font-weight: 700; color: #6B675F; text-transform: uppercase; letter-spacing: 0.04em; padding: 10px 0 4px;">Droits</div>
+                  <sc-for list="{{ permissions }}" as="p" hint-placeholder-count="2">
+                    <div style="display: flex; align-items: center; gap: 10px; padding: 9px 0; border-top: 1px solid #F1ECE3;">
+                      <div style="width: 20px; height: 20px; border-radius: 50%; background: #E1F3E7; color: #2F8F5B; display: flex; align-items: center; justify-content: center; font-size: 12px;">&#10003;</div>
+                      <div style="font-size: 13px; color: #221F1A;">{{ p }}</div>
+                    </div>
+                  </sc-for>
+                </div>
+                <div style="margin: 16px 20px; height: 46px; border-radius: 12px; border: 1.5px solid #C1483A; color: #C1483A; font-size: 14px; font-weight: 700; display: flex; align-items: center; justify-content: center; cursor: pointer;" onClick="{{ goLogin }}">Se déconnecter</div>
+              </sc-if>
+
+            </div>
+
+            <sc-if value="{{ showBottomNav }}">
+              <div style="display: flex; border-top: 1px solid #ECE7DE; background: #FAF7F2; padding: 8px 8px 6px; flex-shrink: 0;">
+                <div onClick="{{ goHomeTab }}" style="flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; cursor: pointer;">
+                  <div style="width: 22px; height: 22px; border-radius: 6px; background: {{ navHomeColor }};"></div>
+                  <div style="font-size: 11px; font-weight: 600; color: {{ navHomeColor }};">Accueil</div>
+                </div>
+                <div onClick="{{ goScannerTab }}" style="flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; cursor: pointer;">
+                  <div style="width: 22px; height: 22px; border: 2.5px solid {{ navScannerColor }}; border-radius: 6px;"></div>
+                  <div style="font-size: 11px; font-weight: 600; color: {{ navScannerColor }};">Scanner</div>
+                </div>
+                <div onClick="{{ goMembersTab }}" style="flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; cursor: pointer;">
+                  <div style="width: 22px; height: 22px; border-radius: 50%; background: {{ navMembersColor }};"></div>
+                  <div style="font-size: 11px; font-weight: 600; color: {{ navMembersColor }};">Membres</div>
+                </div>
+                <div onClick="{{ goProfileTab }}" style="flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; cursor: pointer;">
+                  <div style="width: 18px; height: 18px; border-radius: 50%; border: 2.5px solid {{ navProfileColor }};"></div>
+                  <div style="font-size: 11px; font-weight: 600; color: {{ navProfileColor }};">Profil</div>
+                </div>
+              </div>
+            </sc-if>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ scanSuccessVisible }}">
+          <div style="position: absolute; inset: 0; background: rgba(34,31,26,0.55); display: flex; align-items: center; justify-content: center;">
+            <div style="background: #fff; border-radius: 20px; padding: 28px; width: 260px; display: flex; flex-direction: column; align-items: center; gap: 12px;">
+              <div style="width: 56px; height: 56px; border-radius: 50%; background: #E1F3E7; color: #2F8F5B; display: flex; align-items: center; justify-content: center; font-size: 26px;">&#10003;</div>
+              <div style="font-size: 16px; font-weight: 700; color: #221F1A;">Présence enregistrée</div>
+              <div style="font-size: 13px; color: #6B675F; text-align: center;">Aline Kouadio &middot; {{ scanTime }}</div>
+              <div onClick="{{ closeScanSuccess }}" style="margin-top: 4px; height: 42px; width: 100%; border-radius: 10px; background: #3B4FCC; color: #fff; font-size: 14px; font-weight: 700; display: flex; align-items: center; justify-content: center; cursor: pointer;">Fermer</div>
+            </div>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ hasSelectedMember }}">
+          <div style="position: absolute; inset: 0; background: rgba(34,31,26,0.45); display: flex; align-items: flex-end;">
+            <div style="background: #fff; border-radius: 20px 20px 0 0; padding: 24px 20px 28px; width: 100%; box-sizing: border-box; display: flex; flex-direction: column; gap: 14px;">
+              <div style="width: 36px; height: 4px; border-radius: 2px; background: #ECE7DE; align-self: center;"></div>
+              <div style="display: flex; align-items: center; gap: 14px;">
+                <div style="width: 52px; height: 52px; border-radius: 50%; background: #D97A3F; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 700; flex-shrink: 0;">{{ selectedMember.initials }}</div>
+                <div style="flex: 1; min-width: 0;">
+                  <div style="font-size: 16px; font-weight: 700; color: #221F1A;">{{ selectedMember.name }}</div>
+                  <div style="font-size: 12px; color: #6B675F;">{{ selectedMember.ref }} &middot; {{ selectedMember.antenne }}</div>
+                </div>
+                <div style="font-size: 12px; font-weight: 700; padding: 5px 10px; border-radius: 100px; background: {{ selectedMember.statusBg }}; color: {{ selectedMember.statusFg }};">{{ selectedMember.status }}</div>
+              </div>
+              <div>
+                <div style="display: flex; justify-content: space-between; font-size: 12px; color: #6B675F; margin-bottom: 6px;"><span>Taux de présence</span><span>{{ selectedMember.rate }}%</span></div>
+                <div style="height: 8px; border-radius: 4px; background: #F1ECE3; overflow: hidden;">
+                  <div style="height: 100%; border-radius: 4px; background: #3B4FCC; width: {{ selectedMember.rateWidth }};"></div>
+                </div>
+              </div>
+              <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+                <sc-for list="{{ selectedMember.profiles }}" as="pf" hint-placeholder-count="1">
+                  <div style="padding: 6px 12px; border-radius: 100px; background: #E7E9FB; color: #3B4FCC; font-size: 12px; font-weight: 700;">{{ pf }}</div>
+                </sc-for>
+              </div>
+              <div onClick="{{ closeMemberSheet }}" style="height: 46px; border-radius: 12px; background: #F1ECE3; color: #221F1A; font-size: 14px; font-weight: 700; display: flex; align-items: center; justify-content: center; cursor: pointer;">Fermer</div>
+            </div>
+          </div>
+        </sc-if>
+
+      </div>
+    </x-import>
+  </div>
+
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = {
+    screen: 'login', // login | activate | app
+    tab: 'home', // home | scanner | members | profile
+    role: 'bureau', // member | bureau
+    sessionOpen: true,
+    qrOpen: false,
+    qrSeconds: 24,
+    scanState: 'idle', // idle | success
+    scanTime: '',
+    selectedMemberId: null,
+  };
+
+  members = [
+    { id: 1, initials: 'CD', name: 'Christelle Dabo', ref: 'LMX-2024-0212', antenne: 'Antenne Centre', status: 'Actif', statusBg: '#E1F3E7', statusFg: '#2F8F5B', rate: 92, profiles: ['Membre'] },
+    { id: 2, initials: 'MK', name: 'Moussa Konaté', ref: 'LMX-2023-0044', antenne: 'Antenne Nord', status: 'Actif', statusBg: '#E1F3E7', statusFg: '#2F8F5B', rate: 78, profiles: ['Trésorier'] },
+    { id: 3, initials: 'RT', name: 'Rokia Traoré', ref: 'LMX-2024-0301', antenne: 'Antenne Centre', status: 'Inactif', statusBg: '#FBE4E0', statusFg: '#C1483A', rate: 41, profiles: ['Membre'] },
+    { id: 4, initials: 'SB', name: 'Salif Bamba', ref: 'LMX-2022-0119', antenne: 'Antenne Sud', status: 'Actif', statusBg: '#E1F3E7', statusFg: '#2F8F5B', rate: 88, profiles: ['Secrétaire', 'Membre'] },
+    { id: 5, initials: 'AY', name: 'Aïcha Yao', ref: 'LMX-2024-0090', antenne: 'Antenne Nord', status: 'Actif', statusBg: '#E1F3E7', statusFg: '#2F8F5B', rate: 95, profiles: ['Membre'] },
+  ];
+
+  recentAttendance = [
+    { label: 'Réunion hebdomadaire', date: '3 juil.', time: '14:32', status: 'Validé', badgeBg: '#E1F3E7', badgeFg: '#2F8F5B' },
+    { label: 'Assemblée générale', date: '21 juin', time: '10:05', status: 'Validé', badgeBg: '#E1F3E7', badgeFg: '#2F8F5B' },
+    { label: 'Réunion hebdomadaire', date: '14 juin', time: '14:41', status: 'Annulé', badgeBg: '#FBE4E0', badgeFg: '#C1483A' },
+  ];
+
+  liveScans = [
+    { initials: 'CD', name: 'Christelle Dabo', time: '14:31' },
+    { initials: 'MK', name: 'Moussa Konaté', time: '14:27' },
+    { initials: 'AY', name: 'Aïcha Yao', time: '14:20' },
+    { initials: 'SB', name: 'Salif Bamba', time: '14:09' },
+  ];
+
+  componentDidMount() {
+    this._timer = setInterval(() => {
+      this.setState(s => ({ qrSeconds: s.qrSeconds > 0 ? s.qrSeconds - 1 : 30 }));
+    }, 1000);
+  }
+
+  componentWillUnmount() {
+    clearInterval(this._timer);
+  }
+
+  renderVals() {
+    const s = this.state;
+    const memberWithHandlers = this.members.map(m => ({
+      ...m,
+      onSelect: () => this.setState({ selectedMemberId: m.id }),
+    }));
+    const selectedRaw = this.members.find(m => m.id === s.selectedMemberId) || null;
+    const selectedMember = selectedRaw ? { ...selectedRaw, rateWidth: selectedRaw.rate + '%' } : null;
+
+    const isBureau = s.role === 'bureau';
+
+    return {
+      isLogin: s.screen === 'login',
+      isActivate: s.screen === 'activate',
+      isApp: s.screen === 'app',
+      isQrScreen: s.qrOpen,
+      isTabHome: !s.qrOpen && s.tab === 'home',
+      isTabScanner: !s.qrOpen && s.tab === 'scanner',
+      isTabMembers: !s.qrOpen && s.tab === 'members',
+      isTabProfile: !s.qrOpen && s.tab === 'profile',
+      showBottomNav: !s.qrOpen,
+
+      isBureau,
+      sessionOpen: s.sessionOpen,
+      sessionClosed: !s.sessionOpen,
+      roleLabel: isBureau ? 'Bureau' : 'Membre',
+
+      members: memberWithHandlers,
+      recentAttendance: this.recentAttendance,
+      liveScans: this.liveScans,
+      qrSeconds: s.qrSeconds,
+
+      scanSuccessVisible: s.scanState === 'success',
+      scanTime: s.scanTime,
+
+      hasSelectedMember: !!selectedMember,
+      selectedMember: selectedMember || {},
+
+      permissions: isBureau ? ['Gérer les présences', 'Gérer les membres'] : ['Aucun droit de gestion'],
+      memberPillBg: !isBureau ? '#3B4FCC' : 'transparent',
+      memberPillFg: !isBureau ? '#fff' : '#6B675F',
+      bureauPillBg: isBureau ? '#3B4FCC' : 'transparent',
+      bureauPillFg: isBureau ? '#fff' : '#6B675F',
+
+      navHomeColor: (!s.qrOpen && s.tab === 'home') ? '#3B4FCC' : '#ADA89D',
+      navScannerColor: (!s.qrOpen && s.tab === 'scanner') ? '#3B4FCC' : '#ADA89D',
+      navMembersColor: (!s.qrOpen && s.tab === 'members') ? '#3B4FCC' : '#ADA89D',
+      navProfileColor: (!s.qrOpen && s.tab === 'profile') ? '#3B4FCC' : '#ADA89D',
+
+      goLogin: () => this.setState({ screen: 'login', qrOpen: false, tab: 'home', selectedMemberId: null, scanState: 'idle' }),
+      goActivate: () => this.setState({ screen: 'activate' }),
+      doLogin: () => this.setState({ screen: 'app' }),
+      doActivate: () => this.setState({ screen: 'app' }),
+
+      goHomeTab: () => this.setState({ tab: 'home' }),
+      goScannerTab: () => this.setState({ tab: 'scanner' }),
+      goMembersTab: () => this.setState({ tab: 'members' }),
+      goProfileTab: () => this.setState({ tab: 'profile' }),
+
+      openQr: () => this.setState({ qrOpen: true }),
+      closeQr: () => this.setState({ qrOpen: false }),
+      startSession: () => this.setState({ sessionOpen: true }),
+      closeSession: () => this.setState({ sessionOpen: false, qrOpen: false }),
+
+      simulateScan: () => {
+        const now = new Date();
+        const time = now.getHours().toString().padStart(2, '0') + ':' + now.getMinutes().toString().padStart(2, '0');
+        this.setState({ scanState: 'success', scanTime: time });
+      },
+      closeScanSuccess: () => this.setState({ scanState: 'idle' }),
+
+      setRoleMember: () => this.setState({ role: 'member' }),
+      setRoleBureau: () => this.setState({ role: 'bureau' }),
+
+      closeMemberSheet: () => this.setState({ selectedMemberId: null }),
+    };
+  }
+}
+
+</script>
+</body>
+</html>
