@@ -2,164 +2,186 @@
 
 ## Sommaire
 
-1. [Vue générale](#vue-générale)
-2. [Projets et dépendances](#projets-et-dépendances)
-3. [Couches logiques réelles](#couches-logiques-réelles)
-4. [Patterns identifiés (avec preuve)](#patterns-identifiés-avec-preuve)
-5. [Flux d'une requête](#flux-dune-requête)
-6. [Points de friction et écarts](#points-de-friction-et-écarts)
-7. [Sources analysées](#sources-analysées)
+- [Vue macro](#vue-macro)
+- [Projets .NET et dépendances](#projets-net-et-dépendances)
+- [Couches logiques réelles](#couches-logiques-réelles)
+- [Patterns identifiés](#patterns-identifiés)
+- [Flux d'une requête type](#flux-dune-requête-type)
+- [Violations et écarts constatés](#violations-et-écarts-constatés)
+- [Sources analysées](#sources-analysées)
 
-## Vue générale
+## Vue macro
 
-L'API suit une **architecture en oignon (Clean Architecture)** stricte à 4 projets. La règle de
-dépendance pointe vers l'intérieur : `Domain` ne dépend de rien, `Application` dépend de `Domain`,
-`Infrastructure` et `Api` dépendent des deux. Les inversions de dépendance passent par des
-**ports** (interfaces) définis dans `Domain/Abstractions` et `Application/Abstractions`, implémentés
-dans `Infrastructure` et `Api`.
+La solution suit une **architecture en oignon** (Clean/Onion) revendiquée
+(`Starter.md`, commentaire `Program.cs` l.21). Le backend est découpé en quatre
+projets avec dépendances dirigées vers le domaine. Deux clients (Angular, Flutter)
+consomment l'API HTTP.
 
-## Projets et dépendances
+## Projets .NET et dépendances
 
-Diagramme des 4 projets applicatifs et de leurs implémentations de ports.
+Ce diagramme montre les références inter-projets réelles, extraites des `.csproj`.
 
 ```mermaid
 graph TD
-    Api["Lumineux.Api<br/>controllers, middleware, Program"]
-    App["Lumineux.Application<br/>handlers, DTO, validators, ports"]
-    Dom["Lumineux.Domain<br/>entités, enums, ports"]
-    Inf["Lumineux.Infrastructure<br/>EF, repositories, sécurité, jobs"]
+    Api["Lumineux.Api (Web, controllers)"]
+    App["Lumineux.Application (cas d'usage)"]
+    Dom["Lumineux.Domain (entités, ports)"]
+    Infra["Lumineux.Infrastructure (EF, sécurité, e-mail)"]
 
     Api --> App
-    Api --> Inf
-    Api --> Dom
+    Api --> Infra
+    Infra --> App
     App --> Dom
-    Inf --> App
-    Inf --> Dom
+    Infra -.->|implémente les ports| Dom
 ```
 
-Points d'attention :
+Références telles que déclarées :
 
-- `Api` référence `Infrastructure` **uniquement pour le câblage DI** (`AddInfrastructure`) et la
-  validation JWT (`JwtOptions`, `Program.cs`) ; les controllers ne dépendent que des handlers `Application`.
-- `Infrastructure` dépend de `Application` car il implémente des ports déclarés côté Application
-  (`ITokenIssuer`, `IAuditLogger`, `ICurrentUser`) et réutilise `Permissions`/`AuthOptions`.
-- Deux familles de ports : ceux du **Domain** (`IMemberRepository`, `IClock`, `IEmailSender`,
-  `IQrTokenService`…) et ceux de l'**Application** (`ICurrentUser`, `ITokenIssuer`, `IAuditLogger`).
+- `Lumineux.Api` → `Application` + `Infrastructure` (`Lumineux.Api.csproj`).
+- `Lumineux.Application` → `Domain` (`Lumineux.Application.csproj`).
+- `Lumineux.Infrastructure` → `Application` (`Lumineux.Infrastructure.csproj`).
+- `Lumineux.Domain` → **aucune** dépendance projet ni paquet
+  (`Lumineux.Domain.csproj` est vide) : domaine pur.
 
-Les tests miroir chaque couche : `tests/Lumineux.{Domain,Application,Infrastructure,Api}.Tests`.
+Point d'attention : `Infrastructure` référence `Application` (et non seulement
+`Domain`). C'est cohérent avec le fait que certaines abstractions (ex.
+`ICurrentUser`, `AuthOptions`, `IAuditLogger`, `Permissions`) vivent dans
+`Application/Abstractions` et sont implémentées/consommées par l'infrastructure.
+Les **ports de persistance** (`IMemberRepository`, `IAttendanceRepository`…) et
+les **ports techniques** (`IClock`, `IEmailSender`, `IQrTokenService`,
+`IPasswordHasher`…) résident, eux, dans `Domain/Abstractions`.
 
 ## Couches logiques réelles
 
+Ce diagramme (flowchart + subgraphs) montre les responsabilités effectives par
+couche, telles que le code les organise.
+
 ```mermaid
 flowchart TB
-    subgraph Presentation["Présentation — Lumineux.Api"]
-        C["Controllers REST /api/v1"]
-        MW["Middleware : Exceptions, CorrelationId"]
-        CU["CurrentUser (claims JWT)"]
+    subgraph API["API — Lumineux.Api"]
+        Ctrl["Controllers REST /api/v1/*"]
+        Mw["Middleware: Exception, CorrelationId"]
+        Sec["CurrentUser (claims JWT)"]
     end
-    subgraph Application["Application — cas d'usage"]
-        H["Handlers (1 classe = 1 cas d'usage)"]
-        V["Validators FluentValidation"]
-        DTO["Contracts (records requête/réponse)"]
+    subgraph APP["Application"]
+        Hand["Handlers (un par cas d'usage)"]
+        Val["Validators FluentValidation"]
+        Dto["Contracts / DTOs"]
+        Map["Mappers entite -> DTO"]
     end
-    subgraph Domain["Domaine — modèle riche"]
-        E["Entités (invariants + transitions)"]
-        EN["Enums / value semantics"]
-        P["Ports (interfaces repositories/services)"]
+    subgraph DOM["Domain"]
+        Ent["Entites riches (invariants, transitions)"]
+        Ports["Abstractions (ports)"]
+        Enums["Enums / constantes metier"]
     end
-    subgraph Infrastructure["Infrastructure"]
-        R["Repositories EF"]
-        DB["AppDbContext + Configurations"]
-        SEC["Sécurité : JWT, hachage, QR, reset"]
-        JOB["Jobs : AutoClose, Bootstrappers"]
-        MAIL["Email : SMTP / Logging"]
+    subgraph INFRA["Infrastructure"]
+        Repo["Repositories EF Core"]
+        Db["AppDbContext + Configurations"]
+        SecInfra["JWT, QR, hachage, reset token"]
+        Jobs["SessionAutoCloseService (BackgroundService)"]
+        Mail["SMTP / Logging email sender"]
+        Audit["AuditInterceptor + AuditLogger"]
     end
 
-    C --> H
-    H --> V
-    H --> DTO
-    H --> E
-    H --> P
-    P -.implémenté par.-> R
-    R --> DB
-    H --> SEC
+    Ctrl --> Hand
+    Hand --> Val
+    Hand --> Ports
+    Hand --> Ent
+    Hand --> Map
+    Ports -.-> Repo
+    Ports -.-> SecInfra
+    Repo --> Db
+    Jobs --> Ports
 ```
 
-Observations vérifiées :
+- **API** : controllers fins, une action = un appel de handler. Autorisation par
+  policies (`[Authorize(Policy = Permissions.*)]`). Traduction des exceptions en
+  `ProblemDetails` RFC 7807 (`ExceptionHandlingMiddleware.cs`).
+- **Application** : un **handler par cas d'usage** (pas de MediatR ; instanciation
+  directe via DI). Validation en entrée, vérification des droits, orchestration des
+  ports, mapping vers DTO. Enregistrés en `Scoped` dans `DependencyInjection.cs`.
+- **Domain** : entités **riches** (fabriques statiques `Create`/`Start`/`Issue`,
+  méthodes de transition, invariants levant `DomainException`/`ConflictException`).
+- **Infrastructure** : implémentations EF des ports, services de sécurité, job de
+  fond, envoi d'e-mail, audit.
 
-- **Domaine riche, pas anémique** : les entités portent leurs invariants (fabriques `Create`) et
-  leurs transitions (`AttendanceSession.Close/Cancel/AutoClose`, `MemberAccount.RegisterFailedLogin`,
-  `PasswordResetToken.Consume`). Voir `src/Lumineux.Domain/Entities/`.
-- **Un handler par cas d'usage** (`Application/**/*Handler.cs`), enregistrés explicitement dans
-  `Application/DependencyInjection.cs` (pas de médiateur type MediatR).
-- **Controllers minces** : ils délèguent au handler et laissent le middleware traduire les exceptions.
+## Patterns identifiés
 
-## Patterns identifiés (avec preuve)
+| Pattern | Preuve | Localisation |
+|---------|--------|--------------|
+| Onion / Clean Architecture | dépendances dirigées vers `Domain` | ensemble des `.csproj` |
+| Ports & Adapters (DIP) | interfaces `I*Repository`, `IClock`, `IEmailSender`, `IQrTokenService`… | `Domain/Abstractions`, `Application/Abstractions` |
+| Repository | `MemberRepository`, `AttendanceRepository`, etc. | `Infrastructure/Repositories/` |
+| Handler / Use-case (CQRS léger) | un handler par action ; lecture vs écriture séparées (`I*ReadRepository`) | `Application/**Handler.cs` |
+| Domain model riche | fabriques + méthodes de transition sur les entités | `Domain/Entities/*.cs` |
+| Options pattern | `JwtOptions`, `AuthOptions`, `AutoCloseOptions`, `EmailOptions`… | `*/Security`, `*/BackgroundJobs` |
+| Interceptor (cross-cutting) | audit `CreatedAt/By`, `UpdatedAt/By` automatique | `AuditInterceptor.cs` |
+| Middleware | corrélation + traduction d'erreurs | `Api/Middleware/` |
+| Background worker | clôture automatique périodique | `SessionAutoCloseService.cs` |
+| Émetteur de jeton substituable | `ITokenIssuer` (JWT en prod, `TestTokenIssuer` hors prod) | `DependencyInjection.cs` l. « TestTokenIssuer » |
+| RFC 7807 ProblemDetails | mapping exception → statut + `code` | `ExceptionHandlingMiddleware.cs` |
 
-| Pattern | Preuve |
-|---------|--------|
-| **Clean/Onion Architecture** | Découpage 4 projets + règle de dépendance (`.csproj`, `.slnx`) |
-| **Repository** | `IMemberRepository`, `IAttendanceRepository`… (Domain) → `*Repository` (Infrastructure) |
-| **Séparation lecture/écriture (CQRS léger)** | Ports distincts `IAntennaRepository` vs `IAntennaReadRepository`, `IMemberRepository` vs `IMemberReadRepository`, repos dédiés rapports (`IAttendanceReportRepository`) |
-| **Unit of Work implicite** | `SaveChangesAsync` du repo = frontière transactionnelle ; membre+compte créés en un seul save (`CreateMemberHandler`) |
-| **Ports & Adapters (DI)** | `AddApplication` / `AddInfrastructure`, injection par constructeur partout |
-| **Interceptor** | `AuditInterceptor : SaveChangesInterceptor` peuple `createdt/by`, `updatedt/by` |
-| **Options pattern** | `JwtOptions`, `AuthOptions`, `EmailOptions`, `AutoCloseOptions`, `MemberReferenceOptions` |
-| **Hosted / Background services** | `SessionAutoCloseService`, `PermissionBootstrapper`, `BureauProfilesBootstrapper` |
-| **Middleware pipeline** | `ExceptionHandlingMiddleware` (RFC 7807), `CorrelationIdMiddleware` |
-| **Policy-based authorization** | Policies par permission dans `Program.cs`, `[Authorize(Policy=…)]` sur controllers |
-| **Factory design-time** | `AppDbContextFactory : IDesignTimeDbContextFactory` |
-| **Strategy (résolution runtime)** | Choix `SmtpEmailSender` vs `LoggingEmailSender` selon `Email:Provider` |
+Séparation lecture/écriture : plusieurs ports distinguent explicitement lecture
+seule (`IMemberReadRepository`, `IAntennaReadRepository`,
+`IAttendanceReportRepository`, `IReferenceLookupRepository`) et écriture
+(`IMemberRepository`, `IAntennaRepository`, `IAttendanceRepository`) — CQRS léger
+sans bus ni event sourcing.
 
-## Flux d'une requête
+## Flux d'une requête type
 
-Exemple : `POST /api/v1/attendance-sessions/{id}/scan` (scan de présence).
+Ce diagramme montre le trajet d'un appel authentifié (ex. démarrer une session).
 
 ```mermaid
 sequenceDiagram
-    participant Cli as App mobile
-    participant Ctl as AttendancesController
-    participant H as ScanAttendanceHandler
-    participant QR as QrTokenService
-    participant Repo as Attendance/SessionRepository
-    participant DB as SQL Server
+    participant C as Client (web/mobile)
+    participant M as Middleware (exc + corr id)
+    participant A as Auth JWT + policies
+    participant Ctrl as Controller
+    participant H as Handler (Application)
+    participant P as Port (Domain)
+    participant R as Repository (Infra)
+    participant Db as SQL Server
 
-    Cli->>Ctl: POST /scan (Bearer JWT, {token})
-    Ctl->>H: HandleAsync(sessionId, request)
-    H->>H: valide requête + droit (ICurrentUser)
-    H->>Repo: GetByIdAsync(sessionId)
-    Repo->>DB: SELECT session
-    H->>QR: Validate(secret, step, token, now)
-    H->>Repo: GetValidByMemberAsync (anti-doublon)
-    H->>Repo: AddAsync + SaveChangesAsync
-    Repo->>DB: INSERT attendance
-    H-->>Ctl: ScanResult
-    Ctl-->>Cli: 200 / 409 / 410 (ProblemDetails)
+    C->>M: HTTP + Bearer JWT
+    M->>A: pipeline
+    A->>A: valide jeton + claim "permission"
+    A->>Ctrl: 401/403 si echec, sinon action
+    Ctrl->>H: HandleAsync(request)
+    H->>H: valide (FluentValidation) + droits (ICurrentUser)
+    H->>P: appelle un port
+    P-->>R: implementation EF
+    R->>Db: requete / SaveChanges
+    Db-->>R: resultat
+    R-->>H: entite / DTO
+    H-->>Ctrl: DTO
+    Ctrl-->>C: 2xx + JSON (ou ProblemDetails)
 ```
 
-## Points de friction et écarts
+## Violations et écarts constatés
 
-- **Contrôle d'autorisation en double** : la plupart des endpoints sont protégés par
-  `[Authorize(Policy=…)]` **et** par une re-vérification `_user.HasPermission(...)` dans le handler
-  (ex. `StartSessionHandler`, `AddManualAttendanceHandler`, `CreateMemberHandler`). C'est de la
-  défense en profondeur, mais certains controllers laissent le handler seul juge (voir ci-dessous).
-- **`AttendancesController` marqué `[Authorize]` simple** : le scan (`/scan`, `/scan/batch`) n'exige
-  aucune policy au niveau route (tout membre authentifié peut scanner — c'est voulu), tandis que
-  `attendances` (ajout/liste/suppression manuelle) porte `[Authorize(Policy=ManageAttendance)]`.
-- **`TestTokenIssuer` enregistré dans la DI de production** (`Infrastructure/DependencyInjection.cs`,
-  `services.AddScoped<TestTokenIssuer>()`). Classe destinée aux tests, mais présente dans le conteneur
-  applicatif. Voir 07-dette-technique (Mineur).
-- **Deux sources de permissions** : `member_permissions` (héritée, feature 003) et l'union des droits
-  via profils du bureau (`MemberPermissionRepository.GetPermissionsAsync`). Le jeton n'utilise **que**
-  les profils ; `member_permissions` ne sert plus qu'aux bootstrappers. Voir 04 et 07.
-- **Aucune application automatique des migrations** dans `Program.cs` : la mise à jour du schéma est
-  une étape opératoire externe. ⚠️ Hypothèse — à confirmer.
+- **Double contrôle des droits** (défense en profondeur, pas une faille) : les
+  policies ASP.NET (`[Authorize(Policy=…)]`) **et** les handlers
+  (`_user.HasPermission(...)`) vérifient les permissions. C'est redondant mais
+  intentionnel (le handler reste protégé même appelé hors HTTP). Certains endpoints
+  s'appuient uniquement sur `[Authorize]` + contrôle applicatif (ex. bureau
+  profiles) — cf. 07 pour la cohérence.
+- **`Member` a des setters publics** alors que les autres entités riches
+  (`MemberAccount`, `AttendanceSession`, `Attendance`) sont encapsulées. Choix
+  assumé et commenté pour compatibilité (`Member.cs`), mais c'est une entorse à
+  l'encapsulation du domaine (anémie partielle) — voir 08.
+- **Logique métier dans la couche Application** : la règle « session vide » (comptage
+  des présences) est portée par `CancelSessionHandler`/`CloseSessionHandler`, pas par
+  l'entité (le domaine n'a pas le décompte). Documenté explicitement dans le code
+  (`AttendanceSession.Cancel`). Fuite mineure et consciente.
+- **Infrastructure → Application** : dépendance acceptable ici, mais elle signifie
+  que des abstractions « applicatives » (ex. `Permissions`, `AuthOptions`) sont
+  réutilisées côté infra, brouillant légèrement la frontière App/Infra.
 
 ## Sources analysées
 
-- `src/Lumineux.*/**.csproj`, `Lumineux.slnx`
-- `src/Lumineux.Api/Program.cs`, controllers, middleware, `Security/CurrentUser.cs`
-- `src/Lumineux.Application/DependencyInjection.cs` et handlers
-- `src/Lumineux.Infrastructure/DependencyInjection.cs`, repositories, `Persistence/Interceptors/AuditInterceptor.cs`
-- `src/Lumineux.Domain/Entities/`, `Abstractions/`
+- Tous les `src/*/*.csproj`
+- `src/Lumineux.Api/Program.cs`, `Middleware/ExceptionHandlingMiddleware.cs`
+- `src/Lumineux.Application/DependencyInjection.cs`
+- `src/Lumineux.Infrastructure/DependencyInjection.cs`
+- `src/Lumineux.Domain/Abstractions/*`, `src/Lumineux.Application/Abstractions/*`
 </content>

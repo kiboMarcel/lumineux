@@ -1,176 +1,200 @@
 # 08 — Vue Domain-Driven Design
 
+> Grille de lecture DDD **pragmatique** de la solution. Objectif : éclairer la
+> conception actuelle et proposer des évolutions réalistes, pas imposer une
+> réécriture.
+
 ## Sommaire
 
-1. [Posture](#posture)
-2. [Bounded contexts (candidats)](#bounded-contexts-candidats)
-3. [Context map](#context-map)
-4. [Agrégats et invariants par contexte](#agrégats-et-invariants-par-contexte)
-5. [Événements de domaine (implicites)](#événements-de-domaine-implicites)
-6. [Langage ubiquitaire](#langage-ubiquitaire)
-7. [Écart avec une cible DDD](#écart-avec-une-cible-ddd)
-8. [Sources analysées](#sources-analysées)
+- [Bounded contexts candidats](#bounded-contexts-candidats)
+- [Context map](#context-map)
+- [Agrégats, entités, value objects](#agrégats-entités-value-objects)
+- [Invariants trouvés dans le code](#invariants-trouvés-dans-le-code)
+- [Événements de domaine (implicites)](#événements-de-domaine-implicites)
+- [Langage ubiquitaire](#langage-ubiquitaire)
+- [Écart avec une cible DDD](#écart-avec-une-cible-ddd)
+- [Sources analysées](#sources-analysées)
 
-## Posture
+## Bounded contexts candidats
 
-La solution est un **monolithe modulaire** bien découpé par fonctionnalité. Elle n'emploie pas
-explicitement le vocabulaire DDD (pas de « Aggregate », « ValueObject », « DomainEvent » nommés),
-mais son **domaine riche** et son organisation par feature en font une bonne candidate à une lecture
-DDD. Les « bounded contexts » ci-dessous sont des **regroupements logiques** identifiés d'après les
-namespaces (`Application/*`, `Domain/Entities/*`) — pas des frontières techniques réelles.
+Le backend est un **monolithe modulaire** : un seul `AppDbContext`, mais un
+découpage par dossier fonctionnel dans `Application/` qui révèle des frontières
+naturelles.
 
-## Bounded contexts (candidats)
+| Contexte candidat | Cœur métier | Modules code |
+|-------------------|-------------|--------------|
+| **Attendance** (présence) | sessions, scans, clôture, rapports | `AttendanceSessions/`, `Attendances/`, `Reports/` |
+| **Membership** (adhésion) | fiche membre, référence, référentiels | `Members/`, `Reference/` |
+| **Identity & Access** (IAM) | comptes, connexion, mots de passe, profils/droits | `Auth/`, `BureauProfiles/`, `Setup/` |
 
-| Contexte | Cœur métier | Entités / namespaces |
-|----------|-------------|----------------------|
-| **Identité & Accès** | Comptes, connexion, mots de passe, jetons | `MemberAccount`, `PasswordResetToken`, `Application/Auth`, `Setup` |
-| **Adhésion (Membres)** | Fiche membre, enrôlement, référence | `Member`, nomenclatures, `Application/Members` |
-| **Habilitations** | Profils du bureau, permissions, RBAC | `BureauProfile`, `BureauProfilePermission`, `MemberBureauProfile`, `MemberPermission` |
-| **Présence** | Sessions, QR, scans, clôture | `AttendanceSession`, `Attendance`, `Antenna`, `Application/Attendances`, `AttendanceSessions` |
-| **Reporting** | Agrégations, taux, séries, CSV | `Application/Reports`, `IAttendanceReportRepository` |
-| **Référentiels** | Antennes, civilités, villes, districts, pays | `Antenna`, `Civility`, `City`, `District`, `Country` |
+Ces trois contextes partagent aujourd'hui `Member` comme entité pivot — c'est le
+principal point de couplage (shared kernel de fait).
 
 ## Context map
 
-Relations entre contextes (upstream → downstream). `Member` est le concept partagé (shared kernel).
+Ce diagramme montre les contextes candidats et leurs relations (U = upstream
+fournisseur, D = downstream consommateur).
 
 ```mermaid
 graph TD
-    Membres["Adhésion (Membres)"]
-    Identite["Identité & Accès"]
-    Habil["Habilitations"]
-    Presence["Présence"]
-    Report["Reporting"]
-    Ref["Référentiels"]
+    subgraph IAM["Identity & Access (U)"]
+        Iam["Comptes, profils, droits"]
+    end
+    subgraph Membership["Membership"]
+        Mem["Membres, referentiels"]
+    end
+    subgraph Attendance["Attendance (D)"]
+        Att["Sessions, presences, rapports"]
+    end
 
-    Membres -->|"shared kernel : Member"| Identite
-    Membres -->|"shared kernel : Member"| Habil
-    Membres -->|"origine antenne"| Presence
-    Ref -->|"antenne (lieu)"| Presence
-    Ref -->|"nomenclatures FK"| Membres
-    Habil -->|"droits -> claims du jeton"| Identite
-    Presence -->|"données de présence"| Report
-    Membres -->|"membre évalué"| Report
+    Iam -->|"droits effectifs (claims JWT)"| Att
+    Iam -->|"droits effectifs"| Mem
+    Mem -->|"identite du membre (Member)"| Att
+    Mem -->|"compte provisionne"| Iam
+
+    note1["Member = noyau partage (shared kernel de fait)"]
+    Mem -.-> note1
 ```
 
-Points d'attention :
+- **IAM → Attendance / Membership** : relation *upstream/downstream* via les **claims
+  de permission** portés par le JWT ; les contextes aval consomment les droits, ne
+  les définissent pas.
+- **Membership ↔ IAM** : couplage bidirectionnel autour de `Member`/`MemberAccount`
+  (création de membre = provisionnement de compte). Candidat à un **Anti-Corruption
+  Layer** si l'un des deux devait être extrait.
+- **Attendance** est le contexte le plus autonome (agrégats propres, peu de
+  dépendances entrantes hormis l'identité et les droits).
 
-- **`Member` est un shared kernel de facto** : partagé entre Adhésion, Identité, Habilitations,
-  Présence et Reporting. C'est un concept central mais aussi un point de couplage fort.
-- **Habilitations est upstream d'Identité** : les profils déterminent les claims émis à la connexion
-  (`MemberPermissionRepository.GetPermissionsAsync` consommé par `LoginHandler`/`JwtTokenIssuer`).
-- **Référentiels** est un contexte support (nomenclatures + antennes) fournissant des cibles de FK.
+## Agrégats, entités, value objects
 
-## Agrégats et invariants par contexte
+### Contexte Attendance
 
-### Identité & Accès
-- **Agrégat `MemberAccount`** (racine) : encapsule état d'activation, verrouillage, hash.
-  - Invariants : mot de passe jamais en clair ; `Provision` exige référence + hash ; verrouillage au
-    seuil ; `ChangePassword` lève `MustChangePassword` ; setters privés (mutation par méthodes seulement).
-- **Agrégat `PasswordResetToken`** (racine) : usage unique + durée de vie.
-  - Invariants : jamais stocké en clair (hash) ; `Consume` refuse une double consommation ;
-    `IsUsable` = non consommé et non expiré.
+- **Agrégat `AttendanceSession`** (racine) : `AttendanceSession.cs`. Encapsule son
+  cycle de vie (`Start`, `Close`, `Cancel`, `AutoClose`), le secret QR et le pas de
+  rotation. **Limite actuelle** : les `Attendance` ne sont **pas** chargées comme
+  entités enfants de l'agrégat ; elles forment un agrégat séparé référencé par
+  `SessionId`. La cohérence « session ↔ présences » est donc orchestrée par les
+  handlers, pas par la racine.
+- **Agrégat `Attendance`** (racine de fait) : `Attendance.cs`. Fabriques
+  `RecordScan`/`RecordManual`, transitions `Cancel`/`ApplyEndTime`.
+- **Value objects candidats** (aujourd'hui primitifs) : le **jeton QR**
+  (`QrToken` existe déjà comme record côté service), la **période de rapport**
+  (`ReportPeriod`), l'**heure d'arrivée bornée**.
 
-### Adhésion
-- **Agrégat `Member`** (racine) : fabrique `Create` garantissant référence/nom/prénom/genre valides.
-  - Invariants : genre ∈ {M,F} ; antenne requise (sauf surcharge admin `antennaId = null`) ; statut Active par défaut.
-  - **Anémie partielle** : `Member` a des **setters publics** (compat features 001) — les invariants ne
-    sont garantis qu'à la création, pas aux mutations ultérieures. Value objects absents (email, mobile
-    sont de simples `string?`).
+### Contexte Membership
 
-### Habilitations
-- **Agrégat `BureauProfile`** (racine) + `BureauProfilePermission` (entité fille).
-  - Invariants : nom unique insensible à la casse (`NameNormalized`) ; permissions validées contre
-    `IPermissionCatalog` (droit inconnu rejeté) ; longueurs bornées.
-- Invariant inter-agrégats : **au moins un administrateur actif** (garde-fou `last_administrator`),
-  porté par la couche Application (`CountActiveAdministratorsAsync`) car il traverse plusieurs agrégats.
+- **Agrégat `Member`** (racine) : `Member.cs`. Fabriques `Create`. **Anémie
+  partielle** : setters publics, pas de méthodes de mutation métier.
+- **Entités référentielles** : `Civility`, `Country`, `City`, `District` — plutôt des
+  **value objects de nomenclature** (lecture seule côté membre).
+- **Value objects candidats** : `Reference` membre (aujourd'hui `string`), `Gender`
+  (déjà validé par `Genders.IsValid`), coordonnées de contact.
 
-### Présence
-- **Agrégat `AttendanceSession`** (racine) : machine à états Open → Closed/Cancelled.
-  - Invariants : pas de step QR hors [10,120] s ; double clôture interdite ; annulation réservée à une
-    session ouverte ; auto-clôture idempotente.
-- **Agrégat `Attendance`** (racine séparée) : une présence valide/annulée.
-  - Invariants : session et membre valides ; annulation trace (statut `Cancelled`, pas de suppression).
-  - Invariant inter-agrégats : « une présence valide par membre et par session » → matérialisé par un
-    **index SQL filtré** (hors du domaine), et « vide » vérifié par la couche Application pour l'annulation.
+### Contexte IAM
+
+- **Agrégat `MemberAccount`** (racine) : `MemberAccount.cs`. Riche : verrouillage,
+  changement de mot de passe, activation. Bon exemple d'entité DDD.
+- **Agrégat `BureauProfile`** (racine) : `BureauProfile.cs`, avec ses
+  `BureauProfilePermission` comme entités enfants (vraie composition d'agrégat).
+- **Agrégat `PasswordResetToken`** : cycle de vie usage-unique (`Issue`, `Consume`,
+  `IsUsable`).
+- **Entité d'association** `MemberBureauProfile` : lien membre↔profil (unicité).
+
+## Invariants trouvés dans le code
+
+- Session : une seule ouverte par `(antenne, date)` ; annulation réservée à une
+  session ouverte et **vide** (transaction sérialisable) ; clôture idempotente.
+- Présence : au plus une **valide** par `(session, membre)` (domaine + index unique
+  filtré) ; heure serveur faisant foi ; `clientOperationId` idempotent.
+- Compte : mot de passe stocké **haché uniquement** ; verrouillage après N échecs ;
+  `MustChangePassword` bloque l'émission de jeton.
+- Profil : nom unique insensible à la casse ; droits validés contre le **catalogue
+  figé** ; garde-fou « dernier administrateur ».
+- Reset : jeton usage unique + expiration ; seul le hash est persisté.
+- Référence membre : unique (`LUM-{yyyy}-{seq}`).
 
 ## Événements de domaine (implicites)
 
-Aucun `DomainEvent` explicite. Réactions « quand X arrive, Y se produit » repérées dans le code :
+Aucun **event bus** ni type `DomainEvent` explicite. Les événements sont **implicites**
+(« quand X, alors Y ») et orchestrés dans les handlers :
 
-| Événement métier | Effet codé | Où |
-|------------------|-----------|-----|
-| Session clôturée | Heure de fin propagée à toutes les présences valides | `CloseSessionHandler` |
-| Session expirée (timeout) | Clôture automatique + propagation heure de fin | `SessionAutoCloseService` |
-| Membre créé | Provisionnement du compte + envoi invitation ou remise bureau | `CreateMemberHandler` |
-| Mot de passe réinitialisé | Jeton consommé + compteurs remis à zéro + verrouillage levé | `ResetPasswordHandler` |
-| Reset demandé (compte éligible) | Émission jeton + e-mail | `RequestPasswordResetHandler` |
-| Toute écriture d'entité | Champs d'audit peuplés | `AuditInterceptor` |
+| Événement métier | Déclencheur | Conséquence codée |
+|------------------|-------------|-------------------|
+| `MembreEnrôlé` | `CreateMemberHandler` | provisionnement de compte + envoi d'invitation |
+| `SessionClôturée` | `CloseSessionHandler` / `AutoClose` | heure de fin propagée aux présences valides |
+| `PrésenceEnregistrée` | `ScanAttendanceHandler` | audit `Operation("Scan")` |
+| `PremierAdminInstallé` | `InstallFirstAdminHandler` | profil admin + jeton émis |
+| `MotDePasseRéinitialisé` | `ResetPasswordHandler` | reset compteurs + levée verrou |
 
-Ces effets sont réalisés **en ligne** dans les handlers (orchestration transactionnelle), pas via un
-bus d'événements — cohérent avec la taille du système.
+Ces intentions sont tracées via `IAuditLogger` (`Operation`/`Refused`), ce qui
+constitue un **journal d'événements** de fait, exploitable pour une évolution vers
+des vrais domain events.
 
 ## Langage ubiquitaire
 
-Glossaire des termes tels que nommés dans le code (FR/EN mêlés) :
+Glossaire des termes tels que nommés dans le code :
 
-| Terme métier | Nom dans le code | Remarque |
-|--------------|------------------|----------|
-| Membre | `Member` | — |
-| Compte de connexion | `MemberAccount` | distinct du membre (1-1) |
-| Référence membre | `Reference` / `login_id` | sert d'identifiant de connexion |
+| Terme métier | Nommage code | Notes |
+|--------------|--------------|-------|
 | Antenne | `Antenna` | lieu de réunion |
-| Session de présence | `AttendanceSession` | une réunion datée |
-| Présence | `Attendance` | présence d'un membre à une session |
+| Membre | `Member` | référence = identifiant de connexion |
+| Compte | `MemberAccount` | 1-1 avec Member |
+| Session (de présence) | `AttendanceSession` | réunion datée dans une antenne |
+| Présence | `Attendance` | pointage d'un membre |
 | Profil du bureau | `BureauProfile` | groupe de droits |
 | Droit / permission | `Permission` / claim `permission` | catalogue figé |
-| Jeton QR rotatif | `QrToken` / `QrSecret` | type TOTP |
-| Remise bureau | `BureauHandout` / `CredentialsDelivery` | repli sans e-mail |
+| Référence membre | `Reference` | `LUM-{yyyy}-{seq}` |
+| Jeton QR | `QrToken` / `qr_secret` | TOTP rotatif |
 
-### Incohérences de nommage relevées
+**Incohérences de nommage relevées** :
 
-- **« Bureau »** (français) coexiste avec l'anglais dominant (`Attendance`, `Member`) →
-  `member_bureau_profiles`. Bilinguisme assumé mais hétérogène.
-- **Permission** portée par **deux modèles** (`MemberPermission` legacy vs `BureauProfilePermission`) →
-  même concept, deux tables, sémantiques divergentes (cf. 07-M3).
-- **Durée du jeton** : `Jwt:ExpirationMinutes` vs `Auth:AccessTokenMinutes` → même concept, deux clés (07-m3).
-- **Statut** exprimé tantôt en `string` (`Member.Status`, `Antenna.Status` = "Active"/"Archived"/"Inactive")
-  tantôt en `enum` converti string (`SessionStatus`, `AttendanceStatus`) → deux conventions pour « statut ».
+- « Droit » vs « permission » vs « claim » désignent le même concept selon la couche
+  (métier / catalogue / JWT).
+- `District` est à la fois une **entité référentielle** (`District` avec `Code`,
+  `Label`) et un **champ `int`** sur `Antenna` (`Antenna.District`) — l'antenne stocke
+  un identifiant de district non typé comme FK vers la table `districts`
+  (`⚠️ à confirmer` : cohérence de la relation antenne↔district).
+- « Session » côté attendance vs « session » côté web (`SessionStore` = session
+  d'authentification) : homonyme entre deux contextes.
+- `BirthPlaceId` et `BirthCityId` pointent tous deux vers `City` — distinction
+  lieu/ville de naissance à clarifier dans le glossaire.
 
 ## Écart avec une cible DDD
 
-Ce qui est déjà proche d'une cible DDD :
-- Séparation claire domaine / application / infrastructure.
-- Agrégats avec racines et méthodes de transition (`AttendanceSession`, `MemberAccount`, `PasswordResetToken`).
-- Ubiquité correcte dans le contexte Présence et Auth.
+**Ce qui est déjà bien aligné** :
 
-Où la logique « fuit » hors du domaine (à surveiller, sans dramatiser) :
-- **Invariants d'unicité dans les index SQL** (présence valide unique, contact unique) plutôt que dans
-  le domaine — pragmatique et robuste, mais règle métier invisible depuis le modèle.
-- **Garde-fou « dernier administrateur »** et **contrôle « session vide »** portés par l'Application
-  (agrégats multiples) — normal en DDD (invariant inter-agrégats via service applicatif), à documenter comme tel.
-- **`Member` anémique en mutation** : setters publics et absence de value objects (email, mobile,
-  genre, référence pourraient être des VO).
-- **Génération de référence** (logique métier) logée dans l'Infrastructure.
+- Entités riches côté IAM et Attendance (fabriques, invariants, transitions).
+- Ports & adapters stricts, domaine sans dépendance technique.
+- Séparation lecture/écriture (CQRS léger).
 
-Premières étapes de refactoring réalistes (par valeur/coût) :
-1. **Clarifier la source unique des droits** (profils) et déprécier `member_permissions` (réduit la confusion).
-2. **Encapsuler `Member`** : passer les setters en privés + méthodes de correction (`UpdateContact`,
-   `UpdateIdentity`) portant les règles, comme les autres agrégats.
-3. **Value objects légers** pour `Reference`, `Email`, `Mobile`, `Gender` (validation centralisée).
-4. Documenter explicitement les invariants inter-agrégats (garde-fous admin/session vide) comme des
-   **services de domaine**.
-5. À terme seulement, si le besoin d'extensibilité apparaît : introduire des **événements de domaine**
-   pour découpler les effets (clôture → propagation, création → invitation).
+**Ce qui est anémique / fuit hors du domaine** :
 
-> Recommandation : rester pragmatique. Le système est petit, cohérent et bien testé ; un passage DDD
-> intégral n'est pas justifié. La grille DDD sert surtout à nommer les frontières et à guider les
-> prochaines évolutions (multi-antennes, cotisations — backlog `PO_description.md`).
+- `Member` : setters publics, mutations non encapsulées.
+- Règles de cardinalité session↔présences portées par les handlers (le décompte et
+  la propagation d'heure vivent en Application).
+- Pas de value objects : identifiants et coordonnées restent des primitifs
+  (`primitive obsession` légère).
+
+**Premières étapes réalistes de refactoring** :
+
+1. Encapsuler `Member` (méthodes `UpdateContact`, `Archive`, `AttachToAntenna`) et
+   privatiser les setters.
+2. Introduire quelques value objects à fort ROI : `MemberReference`, `Gender`,
+   `EmailAddress`/`PhoneNumber`, `ReportPeriod`.
+3. Nommer explicitement les domain events (au moins `SessionClosed`,
+   `MemberEnrolled`) même sans bus, pour rendre les effets de bord traçables et
+   testables.
+4. Clarifier l'agrégat `AttendanceSession` : décider s'il devient racine composite
+   des présences (cohérence forte, mais volume) ou reste couplé faiblement (statu
+   quo documenté).
+5. Documenter la frontière IAM/Membership autour de `Member` avant toute extraction
+   de service.
 
 ## Sources analysées
 
-- `src/Lumineux.Domain/Entities/*`, `Enums/*`
-- `src/Lumineux.Application/{Auth,Members,Attendances,AttendanceSessions,BureauProfiles,Setup,Reports}/*`
-- `src/Lumineux.Infrastructure/{Security,Repositories,BackgroundJobs}/*`
-- `PO_description.md` (roadmap/backlog)
+- `src/Lumineux.Domain/Entities/*.cs`, `src/Lumineux.Domain/Enums/*.cs`
+- `src/Lumineux.Application/**/*Handler.cs`
+- `src/Lumineux.Infrastructure/Repositories/EffectivePermissionsReader.cs`
+- `src/Lumineux.Infrastructure/Security/PermissionCatalog.cs`
+- `src/Lumineux.Infrastructure/Observability/AuditLogger.cs` (référencé)
 </content>

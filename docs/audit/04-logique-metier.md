@@ -2,246 +2,323 @@
 
 ## Sommaire
 
-1. [Cartographie des flux](#cartographie-des-flux)
-2. [Cycle de vie du compte et authentification](#cycle-de-vie-du-compte-et-authentification)
-3. [Enrôlement d'un membre](#enrôlement-dun-membre)
-4. [Sessions de présence et QR rotatif](#sessions-de-présence-et-qr-rotatif)
-5. [Scan et synchronisation hors ligne](#scan-et-synchronisation-hors-ligne)
-6. [Profils du bureau et garde-fou « dernier administrateur »](#profils-du-bureau-et-garde-fou--dernier-administrateur-)
-7. [Installation du premier administrateur](#installation-du-premier-administrateur)
-8. [Rapports de présence](#rapports-de-présence)
-9. [Règles métier enfouies](#règles-métier-enfouies)
-10. [Sources analysées](#sources-analysées)
+- [Panorama des flux](#panorama-des-flux)
+- [Flux 1 — Gestion des présences](#flux-1--gestion-des-présences)
+  - [Cycle de vie d'une session](#cycle-de-vie-dune-session)
+  - [Scan QR et jeton rotatif](#scan-qr-et-jeton-rotatif)
+  - [Synchronisation hors ligne](#synchronisation-hors-ligne)
+  - [Clôture et clôture automatique](#clôture-et-clôture-automatique)
+- [Flux 2 — Cycle de vie du membre et du compte](#flux-2--cycle-de-vie-du-membre-et-du-compte)
+- [Flux 3 — Authentification et sécurité du compte](#flux-3--authentification-et-sécurité-du-compte)
+- [Flux 4 — Droits (RBAC par profils)](#flux-4--droits-rbac-par-profils)
+- [Flux 5 — Installation du premier administrateur](#flux-5--installation-du-premier-administrateur)
+- [Règles enfouies / points de vigilance](#règles-enfouies--points-de-vigilance)
+- [Sources analysées](#sources-analysées)
 
-## Cartographie des flux
+## Panorama des flux
 
-| Flux | Handler(s) | Droit requis |
-|------|-----------|--------------|
-| Connexion / activation / reset / changement mdp | `Auth/*Handler` | anonyme (sauf change-password) |
-| Enrôlement membre | `Members/CreateMemberHandler` | `manage_members` |
-| Recherche / fiche / correction membre | `Members/{Search,Get,Update}MemberHandler` | `manage_members` |
-| Démarrer / clôturer / annuler session | `AttendanceSessions/*Handler` | `manage_attendance` |
-| Scan / sync hors ligne | `Attendances/{Scan,SyncOfflineScans}Handler` | authentifié (membre) |
-| Ajout / annulation présence manuelle | `Attendances/{AddManual,Cancel}Handler` | `manage_attendance` |
-| CRUD profils du bureau + attribution/révocation | `BureauProfiles/*Handler` | `manage_bureau_profiles` (lecture élargie) |
-| Installation premier admin + statut | `Setup/*Handler` | anonyme |
-| Antennes (référentiel) | `Antennas/*Handler` | `manage_referentials` |
-| Rapports de présence | `Reports/*Handler` | `manage_attendance` |
+| Flux | Acteur principal | Droit requis | Handlers clés |
+|------|------------------|--------------|---------------|
+| Présences | Bureau + Membre mobile | `manage_attendance` (bureau) | `StartSession`, `ScanAttendance`, `SyncOfflineScans`, `AddManualAttendance`, `CloseSession`, `CancelSession` |
+| Membres | Gestionnaire | `manage_members` | `CreateMember`, `UpdateMember`, `SearchMembers`, `GetMember` |
+| Authentification | Tous | — | `Login`, `ActivateAccount`, `ChangePassword`, `RequestPasswordReset`, `ResetPassword`, `GetCurrentUser` |
+| Droits | Super-admin | `manage_bureau_profiles` | `CreateBureauProfile`, `AssignProfile`, `RevokeProfile`, … |
+| Référentiels | Bureau | `manage_referentials` | `CreateAntenna`, `UpdateAntenna`, `SetAntennaActive` |
+| Rapports | Bureau | `manage_attendance` | `GetAntennaAttendanceSummary`, `GetAttendanceTimeSeries`, `GetMemberAttendanceRate`, `ExportAntennaAttendanceCsv` |
+| Installation | Super-admin | — (verrou naturel) | `InstallFirstAdmin` |
 
-## Cycle de vie du compte et authentification
+## Flux 1 — Gestion des présences
 
-Le compte de connexion (`MemberAccount`) est distinct du membre. Son état est porté par deux
-dimensions : `ActivationState` (PendingActivation → Active) et `MustChangePassword`.
+C'est le cœur métier. Description : lors d'une réunion, un membre du bureau
+**démarre une session** dans une antenne. Un **QR rotatif** est projeté ; chaque
+membre le **scanne** pour être pointé à son heure d'arrivée. Le bureau peut
+**ajouter manuellement** les présents non équipés. La **clôture** fixe l'heure de
+fin, propagée à toutes les présences valides.
 
-```mermaid
-stateDiagram-v2
-    [*] --> PendingActivation : Provision (mot de passe temporaire, MustChangePassword=true)
-    PendingActivation --> Active : Activate (1re connexion, nouveau mot de passe)
-    Active --> Active : Login OK
-    Active --> Verrouille : échecs consécutifs >= MaxFailedAttempts
-    Verrouille --> Active : LockoutUntil dépassé OU reset de mot de passe
-    note right of Verrouille
-        Verrouillage temporaire (LockoutMinutes),
-        pas un état persistant distinct :
-        LockoutUntil > now (MemberAccount.IsLockedOut)
-    end note
-```
+### Cycle de vie d'une session
 
-Règles vérifiées :
-
-- **Anti-énumération** (`LoginHandler`, `ActivateAccountHandler`, `RequestPasswordResetHandler`) :
-  message générique `"Identifiants invalides."` quel que soit le cas ; si le compte est introuvable,
-  un **hachage factice** est calculé pour égaliser le coût temporel (`_passwordHasher.Hash(...)` dont
-  le résultat est jeté). Pour le mot de passe oublié, opération factice `_tokenService.Generate()`.
-- **Verrouillage** (`MemberAccount.RegisterFailedLogin`) : incrémente `FailedAttempts`, verrouille au
-  seuil `Auth:MaxFailedAttempts` (5) pour `Auth:LockoutMinutes` (15). Réinitialisé au succès.
-- **Ordre des contrôles au login** : validation → compte existe → non verrouillé → mot de passe →
-  `MustChangePassword` (403 `password_change_required`) → membre actif → émission du jeton.
-- **Activation** (`ActivateAccountHandler`) : vérifie d'abord le mot de passe temporaire **avant** de
-  révéler que le compte est déjà activé (409). Le nouveau mot de passe doit différer du temporaire
-  (`ActivateAccountValidator`).
-- **Reset** (`ResetPasswordHandler`) : la **politique de mot de passe est validée en premier** (400
-  sans consulter le jeton) ; un jeton inexistant/expiré/consommé → 401 générique indistinct ; le
-  succès change le hash, **consomme** le jeton (usage unique), remet à zéro les compteurs et lève le
-  verrouillage.
-- **Politique mot de passe** (`PasswordRules.ApplyPolicy`) : longueur min `Auth:PasswordMinLength` (8),
-  au moins une lettre et un chiffre.
-- **Jeton d'accès** (`JwtTokenIssuer`) : JWT HMAC-SHA256, claims `member_id`, `ClaimTypes.Name`, et un
-  claim `permission` par droit ; durée `Auth:AccessTokenMinutes` (60). **Pas de refresh token** (choix
-  produit assumé, `PO_description.md` §9.4).
-
-## Enrôlement d'un membre
-
-```mermaid
-sequenceDiagram
-    participant SPA as Console web
-    participant Ctl as MembersController
-    participant H as CreateMemberHandler
-    participant Ref as MemberReferenceGenerator
-    participant Mail as IEmailSender
-    participant DB as SQL Server
-
-    SPA->>Ctl: POST /members (fiche + confirmDuplicate?)
-    Ctl->>H: HandleAsync(request)
-    H->>H: valide + droit manage_members
-    H->>DB: vérifie existence des FK (antenne, civilité…)
-    H->>DB: IsContactUsedByActive(email, mobile) ?
-    alt coordonnée déjà utilisée
-        H-->>Ctl: 409 contact_in_use (non contournable)
-    end
-    alt homonyme non confirmé
-        H->>DB: FindActiveByName(nom, prénom)
-        H-->>Ctl: 409 duplicate_name + ids (confirmation requise)
-    end
-    H->>Ref: NextAsync -> LUM-2026-00042
-    H->>DB: INSERT member + account (1 seul SaveChanges)
-    H->>Mail: SendInvitation(email, ref, mot de passe temp)
-    alt e-mail envoyé
-        H-->>Ctl: 201 delivery=EmailSent
-    else pas d'e-mail / échec
-        H-->>Ctl: 201 delivery=BureauHandout (+ mdp temporaire une fois)
-    end
-```
-
-Règles clés (`CreateMemberHandler`) :
-
-- **Collision de contact non contournable** (email OU mobile d'un membre actif) → `duplicate_name` non,
-  `contact_in_use`. Priorité sur l'homonyme.
-- **Homonyme (nom+prénom)** contournable via `ConfirmDuplicate=true` : sinon 409 avec la liste des ids.
-- **Référence générée** au format `MemberReference:Format` = `LUM-{yyyy}-{seq:00000}` ; la séquence
-  dérive du **nombre de membres de l'année** (`MemberReferenceGenerator`), l'index unique servant de
-  filet. ⚠️ Risque de course sous forte concurrence (voir 07-dette-technique).
-- **Atomicité** : membre + compte insérés dans le même `SaveChanges`.
-- **Mot de passe temporaire** : généré aléatoirement (`IdentityPasswordHasher.GenerateTemporaryPassword`,
-  ~12 car. base64url), haché avant stockage, transmis par e-mail **ou** affiché une seule fois au bureau
-  (« remise bureau ») si pas d'e-mail ou échec d'envoi.
-
-## Sessions de présence et QR rotatif
+La session est une machine à états portée par `AttendanceSession.cs`.
 
 ```mermaid
 stateDiagram-v2
-    [*] --> Open : Start (bureau, antenne + date)
-    Open --> Closed : Close (bureau) — propage EndTime aux présences
-    Open --> Closed : AutoClose (job, idempotent) après MaxOpenHours
-    Open --> Cancelled : Cancel (bureau) si 0 présence valide
+    [*] --> Open : Start (bureau, antenne existante, pas de session ouverte)
+    Open --> Closed : Close (bureau) / AutoClose (systeme)
+    Open --> Cancelled : Cancel (bureau, session VIDE)
     Closed --> [*]
     Cancelled --> [*]
     note right of Open
-        1 seule session ouverte
-        par (antenne, meeting_date)
+        Une seule session Open par (antenne, meeting_date)
+        HasOpenSessionAsync verifie le doublon
     end note
 ```
 
-Règles (`AttendanceSession`, `StartSessionHandler`, `CloseSessionHandler`, `CancelSessionHandler`,
-`SessionAutoCloseService`) :
+Règles extraites du code :
 
-- **Démarrage** : refus si une session ouverte existe déjà pour `(antenne, meeting_date)`
-  (`HasOpenSessionAsync`). L'antenne doit exister. Pas de rotation QR par défaut = 30 s
-  (`DefaultQrStepSeconds`), borné 10–120 s côté domaine.
-- **QR rotatif type TOTP** (`QrTokenService`) : jeton = `HMAC-SHA256(secret, compteur_temps)` tronqué
-  à 8 chiffres, valide `qr_step_seconds`. La **validation tolère ±1 pas** (dérive/latence) et utilise
-  une comparaison à temps constant. Le secret ne quitte jamais le serveur.
-- **Clôture** : `Close` fixe `EndTime` = heure serveur et **propage cette heure de fin à toutes les
-  présences valides** dans la même transaction (`CloseSessionHandler`). Double clôture → 409.
-- **Clôture automatique de secours** (`SessionAutoCloseService`, job) : ferme les sessions ouvertes
-  depuis plus de `AutoClose:MaxOpenHours` (3 h). Heure de fin par défaut = `StartTime + DefaultDurationHours`
-  bornée à `now` (jamais dans le futur). Idempotent, sans membre clôturant. Intervalle min. 30 s.
-- **Annulation** (feature 028) : réservée à une session **ouverte et vide**. Le décompte de présences
-  valides est re-vérifié dans une **transaction sérialisable** (`ExecuteInSerializableTransactionAsync`)
-  pour empêcher qu'un scan concurrent ne perde sa présence. La session passe à l'état terminal
-  `Cancelled` (conservée pour audit : `CancelledByMemberId`, `CancelledAt`).
+- **Démarrage** (`StartSessionHandler.cs`) : exige `manage_attendance` **et** un
+  `MemberId` ; l'antenne doit exister ; refus `409` s'il existe déjà une session
+  ouverte pour ce couple `(antenne, date)` (`HasOpenSessionAsync`). Le pas de
+  rotation QR par défaut est **30 s**, borné à `[10, 120]` s
+  (`AttendanceSession.MinQrStepSeconds`/`MaxQrStepSeconds`). Un `qrSecret`
+  aléatoire de 32 octets est généré et stocké côté serveur uniquement.
+- **Annulation** (`CancelSessionHandler.cs`) : réservée à une session **ouverte et
+  vide**. Le décompte de présences valides est re-vérifié **dans une transaction
+  sérialisable** pour empêcher qu'un scan concurrent ne fasse perdre une présence
+  (`ExecuteInSerializableTransactionAsync`). État terminal conservé pour l'audit
+  (`cancelled_by`, `cancelled_at`).
+- **Clôture** : voir plus bas.
 
-## Scan et synchronisation hors ligne
+### Scan QR et jeton rotatif
 
-Règles du **scan direct** (`ScanAttendanceHandler`) :
-
-- Membre authentifié requis ; session ouverte ; jeton QR valide (sinon 410 `Gone` « code expiré ») ;
-  membre actif ; **anti-doublon** (si déjà présent → renvoie la présence existante, `AlreadyPresent=true`).
-- Heure d'arrivée = **heure serveur** (`_clock.UtcNow`), pas l'heure du client.
-
-Règles de la **synchronisation par lot** (`SyncOfflineScansHandler`, feature 027) :
+Le jeton QR est un **TOTP maison** : `token = HMAC-SHA256(qrSecret, compteur_temps)`
+tronqué à 8 chiffres, avec `compteur = floor(epoch_seconds / stepSeconds)`
+(`QrTokenService.cs`). Une photo du QR devient invalide après ~`stepSeconds`. La
+validation tolère **± 1 pas** (dérive/latence) et compare en temps constant
+(`CryptographicOperations.FixedTimeEquals`). Le secret ne quitte jamais le serveur ;
+seuls le token courant et son `ExpiresAt` sont exposés via `GET .../qr`.
 
 ```mermaid
-flowchart TD
-    A["Item de lot (token, clientArrivalTime, clientOperationId)"] --> B{déjà synchronisé<br/>même clientOperationId ?}
-    B -- oui --> R1["AlreadyPresent"]
-    B -- non --> C{jeton QR valide<br/>au moment du scan ?}
-    C -- non --> R2["Rejected : jeton invalide"]
-    C -- oui --> D{arrivée dans<br/>[StartTime, now] ?}
-    D -- non --> R3["Rejected : hors plage"]
-    D -- oui --> E{session fermée ET<br/>arrivée >= EndTime ?}
-    E -- oui --> R4["Rejected : après clôture"]
-    E -- non --> F{membre déjà<br/>présent ?}
-    F -- oui --> R1
-    F -- non --> G["INSERT présence (heure réelle client, bornée)"]
-    G --> R5["Created"]
+sequenceDiagram
+    participant Bureau as Console web (bureau)
+    participant Mob as App mobile (membre)
+    participant API as API
+    participant QR as QrTokenService
+    participant Db as SQL Server
+
+    Bureau->>API: GET /attendance-sessions/{id}/qr
+    API->>QR: GetCurrentToken(secret, step, now)
+    QR-->>API: token + expiresAt
+    API-->>Bureau: affiche le QR (rafraichi periodiquement)
+    Mob->>Mob: scanne le QR -> token
+    Mob->>API: POST /attendance-sessions/{id}/scan { token }
+    API->>API: session ouverte ? (sinon 409)
+    API->>QR: Validate(secret, step, token, now) (sinon 410 Gone)
+    API->>Db: membre actif ? deja present ? (anti-doublon)
+    alt deja present
+        API-->>Mob: 200 AlreadyPresent=true
+    else nouvelle presence
+        API->>Db: INSERT attendance (source=QrScan, arrival=now serveur)
+        API-->>Mob: 200 presence enregistree
+    end
 ```
 
-Points importants :
+Règles du scan (`ScanAttendanceHandler.cs`) :
 
-- **Idempotence** garantie par `client_operation_id` (index unique filtré) + reprise en cas de course
-  (`catch (ConflictException)` relit la présence existante).
-- L'heure d'arrivée hors ligne est l'**heure réelle du client**, mais **bornée** `[StartTime, now]`
-  et validée par le jeton QR correspondant à ce moment — un scan honnête reste valide même après clôture,
-  sauf si postérieur à `EndTime`.
+- L'heure d'arrivée est **l'heure serveur** (`IClock.UtcNow`), pas celle du client.
+- Session close → `409` (`ConflictException`, « réunion terminée »).
+- Jeton invalide/périmé → `410 Gone` (« Code QR expiré »).
+- Membre inconnu ou **non actif** → `403`.
+- Déjà présent (présence valide existante) → réponse `AlreadyPresent = true`
+  (idempotent, pas d'erreur).
+- Anti-doublon garanti aussi par l'index unique filtré `(session, member)` sur
+  `status='Valid'`.
 
-## Profils du bureau et garde-fou « dernier administrateur »
+### Synchronisation hors ligne
 
-- Un `BureauProfile` porte un nom unique (insensible à la casse via `NameNormalized`) et une liste de
-  permissions **validées contre un catalogue figé** (`PermissionCatalog` : 4 droits — `manage_attendance`,
-  `manage_members`, `manage_bureau_profiles`, `manage_referentials`). Un droit inconnu → `DomainException`.
-- Les **droits effectifs d'un membre** = union des permissions des profils qui lui sont attribués
-  (`MemberPermissionRepository.GetPermissionsAsync`, jointure `member_bureau_profiles × bureau_profile_permissions`).
-- **Garde-fou triple** (`RevokeProfileHandler` / `DeleteBureauProfileHandler` / mise à jour) : si l'action
-  laisserait **zéro administrateur actif** (membre actif portant `manage_bureau_profiles`), refus 409
-  `last_administrator`. Le décompte se fait via `CountActiveAdministratorsAsync` (`BureauProfileRepository`).
-- Attribution **idempotente** (`(member, bureau_profile)` unique).
+L'application mobile capture les scans **hors connexion** et les rejoue par lot
+(`SyncOfflineScansHandler.cs`, endpoint `scan/batch`). Chaque item porte un
+`clientOperationId` (idempotence) et une heure d'arrivée client.
 
-## Installation du premier administrateur
+Règles par item :
 
-`InstallFirstAdminHandler` (feature 005) compose en une transaction : un `Member` (sans antenne),
-un `MemberAccount` actif (mot de passe fourni = final), le profil système « Administrateur » (créé
-s'il n'existe pas, avec **tous** les droits du catalogue), et l'attribution.
+- **Idempotence** : si un `clientOperationId` a déjà été traité, ou si le membre
+  est déjà présent → `AlreadyPresent` (pas de doublon).
+- Jeton QR **validé à l'heure du scan client** (pas à l'heure de sync).
+- Heure d'arrivée **bornée** : rejetée si `< StartTime` ou `> now serveur`.
+- **Post-clôture (FR-023b)** : si la session est close et l'arrivée `>= EndTime` →
+  rejet (« postérieure à la clôture »).
+- Course concurrente : `ConflictException` (violation d'unicité) rattrapée →
+  reclassée `AlreadyPresent`.
 
-- **Verrou naturel** : refus 409 `already_installed` **dès qu'un admin actif existe**, vérifié
-  **avant** la validation du payload (ne rien divulguer sur la structure attendue).
-- **Idempotence du profil** : ne modifie pas un profil « Administrateur » préexistant.
-- Endpoint de **statut** anonyme (`GET /setup/status`, `GetSetupStatusHandler`) renvoyant un simple
-  booléen `installed` pour piloter la découvrabilité côté SPA (feature 013).
+Côté mobile, la file est **persistée chiffrée** (`OfflineQueueStore` sur
+`flutter_secure_storage`) avec **déduplication par séance** (une capture par
+`sessionId`), et un `SyncController` (Riverpod) rejoue le lot au **retour de
+connectivité**, sur **relance manuelle**, ou par **backoff**, sans jamais
+journaliser le jeton (`mobile/lib/features/attendance/`).
 
-## Rapports de présence
+### Clôture et clôture automatique
 
-- **Synthèse par antenne** (`GetAntennaAttendanceSummaryHandler`) : nb sessions, nb présences valides,
-  et **moyenne présences/session** arrondie à 2 décimales (0 si aucune session).
-- **Taux d'assiduité membre** (`GetMemberAttendanceRateHandler`) : `présences valides / sessions
-  éligibles`, fraction 0..1 arrondie à 4 décimales, 0 si aucune session éligible (pas de division par zéro).
-- **Séries temporelles** (`GetAttendanceTimeSeriesHandler` + `TimeBuckets`) et **export CSV**
-  (`ExportAntennaAttendanceCsvHandler`). Période validée par `ReportPeriodValidator`.
-- Tous exigent `manage_attendance` (re-vérifié dans le handler).
+```mermaid
+sequenceDiagram
+    participant Bureau as Bureau
+    participant API as CloseSessionHandler
+    participant Db as SQL Server
 
-## Règles métier enfouies
+    Bureau->>API: POST /attendance-sessions/{id}/close
+    API->>API: droit manage_attendance ?
+    API->>Db: charge session (sinon 404)
+    API->>API: session.Close(memberId, now) (409 si deja close)
+    API->>Db: charge presences valides (for update)
+    loop chaque presence valide
+        API->>API: attendance.ApplyEndTime(now)
+    end
+    API->>Db: SaveChanges (une seule transaction)
+    API-->>Bureau: session close + count
+```
 
-Signalées car non évidentes hors du code :
+- **Clôture manuelle** (`CloseSessionHandler.cs`) : l'heure de fin = heure de
+  clôture, propagée à **toutes les présences valides** dans **une seule
+  sauvegarde** (atomicité). `Close` lève `409` si déjà close.
+- **Clôture automatique de secours** (`SessionAutoCloseService.cs`, FR-024) :
+  `BackgroundService` qui scrute périodiquement (`PollingIntervalSeconds`, min 30 s)
+  les sessions ouvertes depuis plus de `MaxOpenHours`. L'heure de fin par défaut =
+  `StartTime + DefaultDurationHours`, **bornée à maintenant** (garantit
+  `StartTime < endTime <= now`). Idempotente, sans membre clôturant. Désactivable
+  par `AutoClose:Enabled`.
 
-- **Colonnes filtres d'index = règles métier** : l'unicité « un membre actif, un e-mail » et
-  « une présence valide par session » vit dans des **index SQL filtrés** (`MemberConfiguration`,
-  `AttendanceConfiguration`), pas dans du code applicatif. Un contournement du code resterait bloqué en base.
-- **Heure d'arrivée = heure serveur** (scan direct) vs **heure client bornée** (sync hors ligne) :
-  divergence intentionnelle mais subtile.
-- **Deux tables de permissions** : `member_permissions` (héritée) n'alimente plus le jeton ; seuls les
-  profils comptent. Les bootstrappers (`PermissionBootstrapper`, `BureauProfilesBootstrapper`) migrent
-  l'ancien modèle au démarrage. Un droit ajouté dans `member_permissions` sans profil n'aurait **aucun effet**.
-- **Génération de référence** basée sur un `COUNT` annuel : logique de numérotation cachée dans
-  l'infrastructure (`MemberReferenceGenerator`), sensible à la concurrence.
-- **RBAC côté SPA/mobile = confort uniquement** : l'API reste l'autorité (double contrôle
-  policy + handler). Toute règle vue côté client est réputée non fiable.
+## Flux 2 — Cycle de vie du membre et du compte
+
+Description : le **bureau** enrôle un membre ; un **compte** est provisionné
+automatiquement avec un mot de passe temporaire, transmis par e-mail ou remis en
+main propre. Le membre active son compte à la première connexion.
+
+```mermaid
+sequenceDiagram
+    participant B as Bureau (manage_members)
+    participant API as CreateMemberHandler
+    participant Db as SQL Server
+    participant Mail as IEmailSender
+
+    B->>API: POST /members (identite + rattachements)
+    API->>API: valide + droit manage_members
+    API->>Db: verifie existence des FK (antenne, civilite, ...)
+    API->>Db: contact deja utilise par un actif ? -> 409
+    API->>API: homonymes non confirmes ? -> 409 duplicate_name
+    API->>API: genere reference (LUM-2026-00042)
+    API->>API: mot de passe temporaire + hash
+    API->>Db: INSERT member + member_account (1 transaction)
+    API->>Mail: SendInvitation(email, reference, motDePasseTemp)
+    alt e-mail envoye
+        API-->>B: 201 delivery=EmailSent
+    else pas d'e-mail / echec
+        API-->>B: 201 delivery=BureauHandout + mot de passe a remettre
+    end
+```
+
+Règles (`CreateMemberHandler.cs`, `Member.cs`) :
+
+- Invariants domaine à la création : référence, nom, prénom, genre (`M`/`F`),
+  antenne d'origine `> 0` (sauf surcharge nullable pour le premier admin).
+- **Référence** générée `LUM-{yyyy}-{seq:00000}` d'après le nombre de membres de
+  l'année (`MemberReferenceGenerator.cs`) ; l'index unique en base est le filet.
+- **Contact unique** : refus `409 contact_in_use` si e-mail/mobile déjà utilisé par
+  un membre actif (non contournable).
+- **Homonymes** : si nom+prénom déjà présents et `ConfirmDuplicate=false` →
+  `409 duplicate_name` avec la liste des `duplicateMemberIds` (l'UI demande
+  confirmation).
+- Provisionnement atomique membre + compte (`MustChangePassword=true`,
+  `ActivationState=PendingActivation`).
+- **Activation** (`ActivateAccountHandler.cs`) : le nouveau mot de passe doit
+  différer du temporaire (`PasswordRules`).
+
+## Flux 3 — Authentification et sécurité du compte
+
+État du compte (`MemberAccount.cs`, `AccountActivationState`) :
+
+```mermaid
+stateDiagram-v2
+    [*] --> PendingActivation : Provision (mot de passe temporaire)
+    PendingActivation --> Active : Activate (1re connexion reussie / changement)
+    Active --> Active : Login OK
+    note right of PendingActivation
+        MustChangePassword = true -> Login renvoie
+        403 password_change_required
+    end note
+```
+
+Règles de connexion (`LoginHandler.cs`) :
+
+- **Anti-énumération** : compte inexistant → on hache quand même le mot de passe
+  fourni (égalise le coût), message générique « Identifiants invalides ».
+- **Verrouillage** : après `MaxFailedAttempts` (défaut 5) échecs, verrou de
+  `LockoutMinutes` (défaut 15). `IsLockedOut` bloque même avec le bon mot de passe.
+- Mot de passe correct → réinitialise le compteur d'échecs.
+- `MustChangePassword` → `403 password_change_required` (le membre doit changer
+  avant d'obtenir un jeton).
+- Membre non actif → refus générique.
+- Succès → JWT porteur des **droits effectifs** (claim `permission` répété).
+
+Mot de passe oublié (`RequestPasswordResetHandler`, `ResetPasswordHandler.cs`) :
+
+- Jeton de **32 octets** (256 bits), seul le **SHA-256** est persisté ; le clair
+  circule uniquement dans le lien e-mail (`ResetTokenService.cs`).
+- Réponse **indistincte** que le compte existe ou non (anti-énumération).
+- **Politique de mot de passe validée en premier** : un mot de passe non conforme
+  échoue en `400` **sans consulter ni consommer** le jeton (FR-006).
+- Jeton **usage unique** + expiration (`PasswordResetMinutes`, défaut 30). La
+  réinitialisation remet à zéro les compteurs d'échec et lève le verrouillage.
+- Politique commune (`PasswordRules.cs`) : longueur min (défaut 8), au moins une
+  lettre et un chiffre ; nouveau ≠ ancien pour le changement.
+
+## Flux 4 — Droits (RBAC par profils)
+
+Modèle : un **profil du bureau** (`BureauProfile`) porte un ensemble de permissions
+issues d'un **catalogue figé** côté serveur (`PermissionCatalog.cs`). Un membre se
+voit **attribuer** des profils (`MemberBureauProfile`). Ses **droits effectifs**
+sont l'**union dédupliquée** des permissions de tous ses profils
+(`EffectivePermissionsReader.cs`).
+
+Catalogue des droits (`Application/Abstractions/Permissions.cs`) :
+
+| Code | Signification |
+|------|---------------|
+| `manage_attendance` | Gérer les présences (sessions, présences, rapports) |
+| `manage_members` | Gérer les fiches membres |
+| `manage_bureau_profiles` | Gérer les profils et attributions |
+| `manage_referentials` | Gérer les antennes / référentiels |
+
+- La création/mise à jour de profil valide chaque droit contre le catalogue
+  (`BureauProfile.SetPermissions`, `DomainException` si inconnu).
+- Nom de profil **unique insensible à la casse** (`NameNormalized`).
+- **Garde-fou « dernier administrateur »** : la révocation/suppression protège
+  l'existence d'au moins un administrateur actif (cf. `RevokeProfileHandler`,
+  `PO_description.md` ; `CountActiveAdministratorsAsync`).
+- **Consolidation (feature 029)** : le mécanisme de permissions directes par membre
+  a été **retiré** ; les profils sont désormais l'unique source de droits
+  (commentaires `EffectivePermissionsReader.cs`, migration `RemoveMemberPermissions`).
+
+## Flux 5 — Installation du premier administrateur
+
+`InstallFirstAdminHandler.cs` amorce une instance vierge :
+
+- **Verrou naturel prioritaire** : refus `409 already_installed` **avant toute
+  validation** dès qu'un administrateur actif existe (ne divulgue pas la structure
+  attendue).
+- Crée en **une seule transaction** : le `Member` (sans antenne obligatoire), un
+  `MemberAccount` **actif** (mot de passe fourni final, `MustChangePassword` levé),
+  le profil « Administrateur » **avec tous les droits du catalogue** (créé si
+  absent, jamais modifié s'il existe), et l'attribution membre→profil.
+- Retourne directement un **jeton** (l'admin est connecté).
+
+## Règles enfouies / points de vigilance
+
+- **Heure serveur faisant foi** : toutes les heures de présence/clôture sont
+  serveur (`IClock`), jamais celles du client — évite la fraude temporelle.
+- **QR = TOTP maison** dans `QrTokenService` : ce n'est pas un simple identifiant
+  de session mais un code à durée de vie courte ; toute intégration doit respecter
+  la fenêtre `stepSeconds ± 1`.
+- **`OriginAntennaId`** : snapshot de l'antenne d'origine du membre **au moment**
+  de la présence (un membre peut être présent dans une antenne différente de la
+  sienne). Figé sur la présence, pas recalculé.
+- **Transaction sérialisable** pour l'annulation de session (`CancelSessionHandler`)
+  : règle de cohérence subtile, à préserver lors de tout refactoring.
+- **Anti-énumération** présent à trois endroits (login, forgot, reset) : messages
+  volontairement génériques — ne pas « améliorer » les messages d'erreur sans
+  comprendre l'intention sécurité.
+- **Logique métier côté client** : les gardes Angular (`guards.ts`) et les
+  permissions Dart (`mobile/lib/features/auth/application/permissions.dart`)
+  reproduisent le contrôle des droits pour l'UX, mais **l'API reste l'autorité**
+  (403 côté serveur). Ne pas considérer l'UI comme un point de contrôle de sécurité.
 
 ## Sources analysées
 
-- `src/Lumineux.Application/Auth/*`, `Members/CreateMemberHandler.cs`, `Attendances/*`,
-  `AttendanceSessions/*`, `BureauProfiles/RevokeProfileHandler.cs`, `Setup/*`, `Reports/*`
-- `src/Lumineux.Domain/Entities/{MemberAccount,AttendanceSession,Attendance,BureauProfile,PasswordResetToken}.cs`
-- `src/Lumineux.Infrastructure/Security/{QrTokenService,MemberReferenceGenerator}.cs`,
-  `Repositories/{Attendance,AttendanceSession,BureauProfile,MemberPermission}Repository.cs`,
-  `BackgroundJobs/SessionAutoCloseService.cs`
+- `src/Lumineux.Application/AttendanceSessions/*.cs`
+- `src/Lumineux.Application/Attendances/*.cs`
+- `src/Lumineux.Application/Auth/*.cs`
+- `src/Lumineux.Application/Members/CreateMemberHandler.cs`
+- `src/Lumineux.Application/Setup/InstallFirstAdminHandler.cs`
+- `src/Lumineux.Application/Reports/GetAttendanceTimeSeriesHandler.cs`
+- `src/Lumineux.Domain/Entities/*.cs`, `src/Lumineux.Domain/Enums/*.cs`
+- `src/Lumineux.Infrastructure/Security/QrTokenService.cs`, `ResetTokenService.cs`, `MemberReferenceGenerator.cs`
+- `src/Lumineux.Infrastructure/BackgroundJobs/SessionAutoCloseService.cs`
+- `mobile/lib/features/attendance/` (file hors ligne + sync)
 </content>

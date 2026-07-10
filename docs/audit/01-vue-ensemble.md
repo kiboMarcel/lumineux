@@ -2,167 +2,165 @@
 
 ## Sommaire
 
-1. [À quoi sert la solution](#à-quoi-sert-la-solution)
-2. [Stack et versions](#stack-et-versions)
-3. [Prérequis](#prérequis)
-4. [Builder, lancer, tester](#builder-lancer-tester)
-5. [Diagramme de contexte](#diagramme-de-contexte)
-6. [Sources analysées](#sources-analysées)
+- [À quoi sert la solution](#à-quoi-sert-la-solution)
+- [Stack et versions](#stack-et-versions)
+- [Prérequis](#prérequis)
+- [Builder, lancer, tester](#builder-lancer-tester)
+- [Diagramme de contexte](#diagramme-de-contexte)
+- [Sources analysées](#sources-analysées)
 
 ## À quoi sert la solution
 
-**Lumineux** est le système d'information de l'association du même nom. Il permet au **bureau**
-de gérer au quotidien :
+Lumineux est le système de gestion d'une **communauté associative** organisée en
+**antennes** (lieux de réunion). Le besoin métier premier, et le plus abouti dans
+le code, est la **gestion des présences** aux réunions : un membre du bureau ouvre
+une **session** de présence dans une antenne, un **code QR rotatif** est projeté,
+les membres le scannent avec l'application mobile pour être pointés à leur heure
+d'arrivée, et le bureau peut aussi ajouter manuellement les présents non équipés.
+La clôture de la session fixe l'heure de fin de réunion pour tous les présents.
+(`src/Lumineux.Domain/Entities/AttendanceSession.cs`, `Attendance.cs`, `Starter.md`.)
 
-- les **membres** de la communauté (enrôlement, fiche d'identité, rattachement à une antenne) ;
-- les **présences** aux réunions, via des **sessions de présence** matérialisées par un **QR code
-  rotatif** que les membres scannent avec leur téléphone pour prouver leur présence ;
-- les **droits d'accès** (profils du bureau regroupant des permissions fonctionnelles) ;
-- le **cycle de vie des comptes** (activation à la première connexion, mot de passe oublié, verrouillage).
+Autour de ce cœur, la solution gère :
 
-Trois applications composent le produit :
+- **Les membres** : fiche d'identité complète (état civil, contacts, rattachement
+  à une antenne d'origine, introducteur), avec référence unique servant
+  d'identifiant de connexion (`Member.cs`, `Members/CreateMemberHandler.cs`).
+- **Les comptes et l'authentification** : provisionnement d'un compte à la création
+  du membre, mot de passe temporaire, activation, connexion JWT, verrouillage après
+  échecs, mot de passe oublié (`MemberAccount.cs`, `Auth/*Handler.cs`).
+- **Les droits (RBAC)** : des **profils du bureau** regroupent des permissions
+  fonctionnelles, attribuées aux membres ; les droits effectifs sont l'union des
+  permissions des profils portés (`BureauProfile.cs`, `EffectivePermissionsReader.cs`).
+- **Les antennes** et **référentiels** (civilités, pays, villes, districts).
+- **Les rapports** de présence (synthèse par antenne, série temporelle, taux de
+  présence par membre, export CSV) — `src/Lumineux.Application/Reports/`.
 
-1. **API REST** (`src/`) — le cœur : porte toute la logique métier et la persistance. Unique source de vérité.
-2. **Console web bureau** (`web/`, Angular) — back-office : membres, profils, sessions, rapports.
-   Affiche et projette le QR ; ne scanne pas.
-3. **App mobile membre** (`mobile/`, Flutter) — côté terrain : le membre s'authentifie et **scanne**
-   le QR pour marquer sa présence, avec **capture hors ligne** et synchronisation par lot.
-
-Le cadrage produit détaillé (personas, périmètre, roadmap par lots) est dans `PO_description.md`.
+Deux frontaux consomment l'API : une **console web Angular** (back-office bureau,
+dashboard complet) et une **application mobile Flutter** (membre : scan QR,
+capture hors ligne, cycle de vie du compte).
 
 ## Stack et versions
 
-### API (.NET)
+| Composant | Technologie | Version cible (constatée) | Source |
+|-----------|-------------|---------------------------|--------|
+| Backend | .NET / ASP.NET Core Web API | `net10.0` | `Directory.Build.props` |
+| ORM | EF Core (SQL Server) | `10.0.0` | `Directory.Packages.props` |
+| Auth | JWT Bearer (HMAC-SHA256) | pkg `10.0.0` / `8.3.0` | `Directory.Packages.props`, `JwtTokenIssuer.cs` |
+| Validation | FluentValidation | `11.11.0` | `Directory.Packages.props` |
+| Logs | Serilog.AspNetCore | `9.0.0` | `Program.cs` |
+| API docs | Swashbuckle (Swagger) | `7.2.0` | `Program.cs` |
+| Tests backend | xUnit + FluentAssertions + NSubstitute | `2.9.2` / `6.12.2` / `5.3.0` | `Directory.Packages.props` |
+| Console web | Angular (standalone) | `^20.3` | `web/package.json` |
+| QR (web) | angularx-qrcode / qrcode | `^20.0` / `^1.5.4` | `web/package.json` |
+| Tests web | Vitest / Karma+Jasmine / Playwright | — | `web/package.json` |
+| Mobile | Flutter / Dart | Dart `>=3.7 <4.0` | `mobile/pubspec.yaml` |
+| État mobile | Riverpod / go_router / Dio | `^2.6` / `^14.6` / `^5.7` | `mobile/pubspec.yaml` |
+| Scan / stockage | mobile_scanner / flutter_secure_storage | `^7.2` / `^9.2` | `mobile/pubspec.yaml` |
 
-Source : `Directory.Build.props`, `Directory.Packages.props`, `*.csproj`.
+Le versionnement des paquets NuGet est **centralisé** (`ManagePackageVersionsCentrally`)
+dans `Directory.Packages.props` ; `Nullable` et `ImplicitUsings` sont activés, les
+analyseurs .NET sont en `latest-recommended` (`Directory.Build.props`).
 
-| Élément | Valeur |
-|---------|--------|
-| Framework cible | **net10.0** (`Directory.Build.props`) |
-| Langage | C# `LangVersion=latest`, `Nullable=enable`, `ImplicitUsings=enable` |
-| ORM | **EF Core 10.0.0** (SqlServer + Sqlite pour les tests, Design) |
-| Base de données | **SQL Server** (`options.UseSqlServer`, `Infrastructure/DependencyInjection.cs`) |
-| Auth | JWT Bearer (`Microsoft.AspNetCore.Authentication.JwtBearer` 10.0.0, `System.IdentityModel.Tokens.Jwt` 8.3.0) |
-| Validation | **FluentValidation 11.11.0** |
-| Hachage mot de passe | `Microsoft.Extensions.Identity.Core` 10.0.0 (`PasswordHasher`, PBKDF2) |
-| Logs | **Serilog.AspNetCore 9.0.0** (console + request logging) |
-| OpenAPI | **Swashbuckle 7.2.0** (Swagger UI en dev) |
-| Tests | xUnit 2.9.2, FluentAssertions 6.12.2, NSubstitute 5.3.0, `Mvc.Testing` 10.0.0, coverlet |
-| Gestion des versions | **Central Package Management** (`Directory.Packages.props`) |
-
-> Note : le fichier de solution est au format récent **`.slnx`** (`Lumineux.slnx`), pas `.sln`.
-
-### Console web
-
-Source : `web/package.json`.
-
-| Élément | Valeur |
-|---------|--------|
-| Framework | **Angular 20.3** (composants standalone, signals) |
-| Langage | TypeScript 5.9 |
-| QR | `angularx-qrcode` 20 + `qrcode` 1.5 |
-| Tests | Karma/Jasmine + Vitest + **Playwright** (e2e) |
-
-### App mobile
-
-Source : `mobile/pubspec.yaml`.
-
-| Élément | Valeur |
-|---------|--------|
-| SDK | **Flutter** (canal stable, `3.44.5` en CI), Dart `>=3.7.0 <4.0.0` |
-| État / DI | `flutter_riverpod` 2.6 |
-| Navigation | `go_router` 14.6 |
-| HTTP | `dio` 5.7 (intercepteurs Bearer + erreurs) |
-| Stockage sécurisé | `flutter_secure_storage` 9.2 (Keychain/Keystore) |
-| Scan | `mobile_scanner` 7.2, `permission_handler` 12 |
-| Connectivité | `connectivity_plus` 6.1 (déclencheur de synchro hors ligne) |
+> Note : `.NET 10`, `EF Core 10` et `Angular 20` sont des versions récentes ;
+> vérifier leur disponibilité GA sur l'environnement de build ciblé.
 
 ## Prérequis
 
-- **.NET SDK 10** (pour builder/tester l'API).
-- **SQL Server** accessible (chaîne `ConnectionStrings:Default`). En dev :
-  `Server=localhost;Database=Lumineux;Trusted_Connection=True;TrustServerCertificate=True`
-  (`src/Lumineux.Api/appsettings.Development.json`).
-- **Node.js + Angular CLI 20** pour la console web.
-- **Flutter SDK stable** pour l'app mobile.
-- Outil `dotnet-ef` pour appliquer les migrations. ⚠️ Hypothèse — à confirmer : aucun script
-  d'application automatique des migrations au démarrage n'a été trouvé dans `Program.cs` ; la base
-  doit être migrée manuellement (`dotnet ef database update`).
+- **SDK .NET 10** (backend, CI : `dotnet-version: 10.0.x`).
+- **SQL Server** accessible (chaîne `ConnectionStrings:Default`).
+- **Node.js 22** + npm (console web, CI : `node-version: 22`).
+- **Flutter stable 3.44.5** (mobile, CI : `subosito/flutter-action`).
+- **Secret JWT obligatoire** : `Jwt:SigningKey` (min. 32 octets) — le démarrage de
+  l'API échoue volontairement s'il est absent ou trop court (`Program.cs` l.108-115).
 
 ## Builder, lancer, tester
 
-> ⚠️ Les commandes ci-dessous sont **déduites** de la structure standard .NET/Angular/Flutter.
-> Aucun script d'orchestration racine (Makefile, `build.ps1`) n'a été trouvé au niveau du dépôt.
-
-### API
+**Backend** (depuis la racine) :
 
 ```bash
-# À la racine du dépôt
-dotnet build Lumineux.slnx
-dotnet test Lumineux.slnx                       # 373 tests (xUnit)
-dotnet run --project src/Lumineux.Api            # Swagger UI en dev sur /swagger
+dotnet restore Lumineux.slnx
+dotnet build Lumineux.slnx -c Release
+dotnet test Lumineux.slnx -c Release        # ~83 fichiers de tests
+# Fournir le secret en dev avant de lancer l'API :
+dotnet user-secrets set "Jwt:SigningKey" "<clé aléatoire >= 32 octets>" \
+  --project src/Lumineux.Api
+dotnet run --project src/Lumineux.Api        # Swagger exposé en Development
 ```
 
-Configurer avant lancement (hors dev) : `ConnectionStrings:Default`, `Jwt:SigningKey`,
-`Cors:AllowedOrigins` (voir 06-configuration-deploiement.md).
+**Migrations base de données** (code-first) :
 
-### Console web
+```bash
+# Un AppDbContextFactory existe pour les outils EF (design-time).
+dotnet ef database update --project src/Lumineux.Infrastructure \
+  --startup-project src/Lumineux.Api
+```
+
+(`src/Lumineux.Infrastructure/Persistence/AppDbContextFactory.cs`.)
+
+**Console web** :
 
 ```bash
 cd web
-npm install
-npm start        # ng serve, http://localhost:4200
-npm test         # Karma/Vitest
-npm run e2e      # Playwright
+npm ci
+npm start          # ng serve (http://localhost:4200)
+npm test           # tests unitaires
+npm run build      # build de production
+npm run e2e        # Playwright
 ```
 
-### App mobile
+**Mobile** :
 
 ```bash
 cd mobile
 flutter pub get
-flutter run --dart-define-from-file=env/dev.json   # profils : dev / device / usb / prod
+flutter analyze
 flutter test
+flutter run
 ```
 
 ## Diagramme de contexte
 
-Le diagramme montre le système Lumineux, ses acteurs et ses dépendances externes.
+Ce diagramme montre le système Lumineux, ses acteurs humains et les systèmes
+externes avec lesquels il interagit.
 
 ```mermaid
 graph TD
-    Bureau["Membre du bureau<br/>(admin, gestionnaire, resp. présence)"]
-    Membre["Membre simple"]
+    Bureau["Membre du bureau (back-office)"]
+    Membre["Membre (mobile)"]
+    Admin["Super-administrateur"]
 
     subgraph Lumineux
-        SPA["Console web Angular<br/>(web/)"]
-        Mobile["App mobile Flutter<br/>(mobile/)"]
-        API["API REST .NET 10<br/>(src/Lumineux.Api)"]
+        API["API Lumineux (.NET 10)"]
+        Web["Console web (Angular)"]
+        Mobile["App mobile (Flutter)"]
     end
 
-    DB[("SQL Server")]
-    SMTP["Serveur SMTP<br/>(invitations, reset)"]
+    SqlServer[("SQL Server")]
+    Smtp["Serveur SMTP (e-mail)"]
 
-    Bureau -->|"HTTPS, JWT"| SPA
-    Membre -->|"HTTPS, JWT"| Mobile
-    SPA -->|"REST /api/v1, Bearer"| API
-    Mobile -->|"REST /api/v1, Bearer"| API
-    API -->|"EF Core"| DB
-    API -->|"SMTP ou log"| SMTP
+    Admin -->|installe / gouverne| Web
+    Bureau -->|membres, presences, droits| Web
+    Membre -->|scan QR, compte| Mobile
+    Web -->|REST + JWT| API
+    Mobile -->|REST + JWT| API
+    API -->|EF Core| SqlServer
+    API -->|invitations, reset mot de passe| Smtp
 ```
 
 Points d'attention :
 
-- Les deux clients ne parlent **qu'à l'API** ; aucun accès direct à la base ou au SMTP.
-- L'e-mail peut être un **vrai SMTP** ou un simple **logger** selon `Email:Provider`
-  (voir `Infrastructure/DependencyInjection.cs`).
-- Le lien de réinitialisation pointe vers la **SPA** (`Auth:PasswordResetUrlBase`), pas vers l'API.
+- L'API est **la seule source de vérité** des règles métier ; web et mobile
+  appliquent les droits côté UX mais l'API reste l'autorité (`PO_description.md`,
+  `guards.ts`).
+- L'e-mail est **optionnel** : sans configuration SMTP, un émetteur de repli
+  journalise (`LoggingEmailSender`) et les identifiants sont remis « en main
+  propre » par le bureau (`CreateMemberHandler.cs`).
 
 ## Sources analysées
 
 - `Directory.Build.props`, `Directory.Packages.props`, `Lumineux.slnx`
-- `src/Lumineux.Api/Program.cs`, `appsettings.json`, `appsettings.Development.json`
-- `src/Lumineux.Infrastructure/DependencyInjection.cs`
-- `web/package.json`, `mobile/pubspec.yaml`, `mobile/env/*.json`
-- `PO_description.md`, `specs/` (liste des features)
+- `src/Lumineux.Api/Program.cs`
+- `web/package.json`, `mobile/pubspec.yaml`
+- `.github/workflows/dotnet-ci.yml`, `.github/workflows/mobile-ci.yml`
+- `Starter.md`, `PO_description.md`
 </content>

@@ -1,92 +1,76 @@
 # Audit technique — Solution Lumineux
 
-> Documentation d'audit produite par relecture du code source. Chaque affirmation
-> structurante référence sa source (`chemin/fichier.cs`). Les déductions sans preuve
-> directe sont marquées `⚠️ Hypothèse — à confirmer`. Les éléments non analysés sont
-> listés en fin de document (« Angles morts »).
+> Documentation d'audit produite par lecture directe du code. Chaque affirmation
+> structurante référence sa source (`chemin/fichier.cs`). Les déductions sont
+> marquées `⚠️ Hypothèse — à confirmer`. Les zones non analysées figurent dans
+> « Angles morts ».
 
 ## Sommaire
 
-1. [Périmètre](#périmètre)
-2. [Méthodologie](#méthodologie)
-3. [Index des documents](#index-des-documents)
-4. [Synthèse express](#synthèse-express)
-5. [Angles morts](#angles-morts)
-6. [Sources analysées](#sources-analysées)
+| # | Document | Contenu |
+|---|----------|---------|
+| — | [README.md](README.md) | Index, périmètre, méthodologie, angles morts |
+| 01 | [01-vue-ensemble.md](01-vue-ensemble.md) | Résumé métier, stack, build/lancement, contexte |
+| 02 | [02-architecture.md](02-architecture.md) | Couches, projets, dépendances, patterns |
+| 03 | [03-modele-donnees.md](03-modele-donnees.md) | Entités, relations, EF Core, migrations |
+| 04 | [04-logique-metier.md](04-logique-metier.md) | Flux métier, règles, machines à états |
+| 05 | [05-integrations.md](05-integrations.md) | API exposées, e-mail, clients web/mobile |
+| 06 | [06-configuration-deploiement.md](06-configuration-deploiement.md) | Config, secrets, CI, hébergement |
+| 07 | [07-dette-technique.md](07-dette-technique.md) | Constats classés, risques, quick wins |
+| 08 | [08-vue-ddd.md](08-vue-ddd.md) | Relecture Domain-Driven Design |
 
-## Périmètre
+## Périmètre audité
 
-L'audit couvre le mono-dépôt **Lumineux**, qui contient trois briques :
-
-| Brique | Emplacement | Stack | Rôle |
-|--------|-------------|-------|------|
-| **API** (cœur métier) | `src/`, `tests/` | .NET 10 / C# / EF Core 10 / SQL Server | Source de vérité : membres, présences, droits, auth |
-| **Console web bureau** | `web/` | Angular 20 (SPA) | Back-office du bureau (consomme l'API) |
-| **App mobile membre** | `mobile/` | Flutter / Dart | Scan QR de présence par le membre (consomme l'API) |
-
-L'audit **approfondit l'API .NET** (logique métier, données, sécurité) et **cartographie**
-les deux clients (web, mobile) sans relire chaque composant en détail — ils ne portent
-aucune règle métier (l'API reste l'unique autorité, confirmé par
-`web/src/app/core/session/session-store.ts` et `PO_description.md`).
+- **Backend .NET** : solution `Lumineux.slnx` (4 projets `src/` + 4 projets `tests/`).
+- **Console web** : SPA Angular sous `web/`.
+- **Application mobile** : client Flutter sous `mobile/`.
+- **Automatisation** : workflows GitHub Actions sous `.github/workflows/`.
 
 ## Méthodologie
 
-- Inventaire complet du dépôt (arborescence, `.slnx`, `.csproj`, `package.json`, `pubspec.yaml`).
-- Lecture en profondeur : entités du domaine, handlers applicatifs, configuration EF, services
-  de sécurité, middleware, `Program.cs`, migrations.
-- Survol : boilerplate (DTO records, mappers, controllers minces), composants Angular/Flutter.
-- Aucune modification du code source. Seules écritures : les fichiers de ce dossier.
-- Outils : lecture de fichiers et recherche `ripgrep` uniquement (aucune exécution de build/test).
+1. Cartographie du dépôt (arborescence, fichiers projet, versions cibles).
+2. Identification des points d'entrée (`Program.cs`, controllers, `BackgroundService`,
+   `main.ts` Angular, `main.dart` Flutter).
+3. Lecture en profondeur des zones à forte logique métier : entités du domaine,
+   handlers de cas d'usage `Application/`, services de sécurité, configurations EF.
+4. Survol du boilerplate (DTOs, mappers, migrations générées).
 
-## Index des documents
+Les commandes shell n'ont servi qu'à l'inspection (listing, lecture, comptage).
+Aucun code source n'a été modifié ; les seules écritures sont ces fichiers de doc.
 
-| Fichier | Contenu |
-|---------|---------|
-| [01-vue-ensemble.md](01-vue-ensemble.md) | Résumé métier, stack et versions, prérequis, build/lancement/tests, diagramme de contexte |
-| [02-architecture.md](02-architecture.md) | Couches Onion/Clean, projets et références, patterns, points de friction |
-| [03-modele-donnees.md](03-modele-donnees.md) | Entités, relations (erDiagram), mapping code↔tables, index, migrations |
-| [04-logique-metier.md](04-logique-metier.md) | Flux métier (auth, membres, présences, profils, setup), règles, machines à états |
-| [05-integrations.md](05-integrations.md) | API exposée, SMTP, JWT, clients web/mobile, comportements en panne |
-| [06-configuration-deploiement.md](06-configuration-deploiement.md) | Configuration par environnement, secrets, CI, hébergement |
-| [07-dette-technique.md](07-dette-technique.md) | Constats classés Critique/Majeur/Mineur, localisation, remédiation |
-| [08-vue-ddd.md](08-vue-ddd.md) | Relecture DDD : bounded contexts, agrégats, langage ubiquitaire, écarts |
+## Chiffres clés (constatés)
 
-## Synthèse express
+- Backend : 4 projets applicatifs, ~13 controllers, ~50 handlers de cas d'usage.
+- Tests backend : ~83 fichiers de tests répartis sur les 4 projets de test
+  (`tests/`), exécutés par la CI (`.github/workflows/dotnet-ci.yml`).
+- Tests web : ~40 fichiers `*.spec.ts` (`web/src`).
+- Tests mobile : ~48 fichiers Dart (`mobile/test`, `mobile/integration_test`).
+- 11 migrations EF Core (`src/Lumineux.Infrastructure/Persistence/Migrations/`).
+- 29 dossiers de spécifications fonctionnelles versionnées (`specs/001…029`).
 
-- Architecture **Clean/Onion** rigoureuse en 4 projets (Domain, Application, Infrastructure, Api),
-  avec un **domaine riche** (entités porteuses d'invariants et de transitions d'état).
-- Solution **feature-driven** (28 specs numérotées dans `specs/`), très bien documentée dans le code.
-- Sécurité soignée : anti-énumération, verrouillage de compte, jetons QR rotatifs type TOTP,
-  hachage PBKDF2, jetons de reset à usage unique hachés, RBAC par claims/policies.
-- Couverture de tests substantielle : **373 tests** (`[Fact]`/`[Theory]`) sur 4 projets.
+## Angles morts (non analysés en profondeur)
 
-## Angles morts
+- **Fichiers générés / binaires** : `obj/`, `bin/`, `web/dist/`, `mobile/build/`,
+  `web/node_modules/` — non lus (artefacts de compilation).
+- **Migrations EF `*.Designer.cs` et `AppDbContextModelSnapshot.cs`** : parcourus
+  seulement pour recouper le schéma ; le modèle réel a été lu depuis les
+  `Configurations/` (source de vérité).
+- **Détail exhaustif de la SPA Angular** : routes, gardes, intercepteurs, API
+  clients et modèles ont été lus ; le rendu HTML/CSS de chaque composant et les
+  `*.spec.ts` n'ont pas été lus ligne à ligne.
+- **Détail exhaustif du client Flutter** : architecture (features, contrôleurs
+  Riverpod, file hors ligne, sync) lue ; l'intégralité des écrans de présentation
+  et la configuration native `android/` `ios/` n'ont pas été lues ligne à ligne.
+- **`template_mobile/`** : dossier de gabarit non audité (hors périmètre applicatif).
+- **`specs/`, `ai-specs/`, `PO_description.md`** : lus partiellement comme contexte
+  métier ; ils ne font pas foi face au code (pris comme intention, pas comme état).
+- **Contenu réel de la base** : aucune base n'a été interrogée ; le schéma décrit
+  provient du code EF Core, pas d'une instance vivante.
 
-Éléments **non analysés en profondeur** (donc non garantis par cet audit) :
+## Sources analysées (transverses)
 
-- **Clients web (Angular) et mobile (Flutter)** : structure cartographiée, composants individuels
-  non relus ligne à ligne. Aucune règle métier n'y est censée résider, mais les validations UI et
-  la robustesse hors ligne côté mobile (`mobile/lib/features/attendance/`) ne sont pas auditées en détail.
-- **Migrations EF** (`src/Lumineux.Infrastructure/Persistence/Migrations/`) : seul le modèle courant
-  (via les `Configuration` EF) a été lu ; le contenu SQL de chaque migration n'a pas été vérifié pas à pas.
-- **Tests** : comptés et localisés, mais leur pertinence/qualité n'a pas été évaluée cas par cas.
-- **Fichiers binaires / générés** : `obj/`, `bin/`, `node_modules/`, `mobile/build/`, dossiers `android/`
-  et `ios/` (natif), assets — hors périmètre.
-- **`C:\Dev\Lumineux\exports\`** : bibliothèque d'assets de marque (SVG, logos) — non pertinent pour la logique.
-- **Repositories de lecture/rapports** (`AttendanceReportRepository`, `MemberReadRepository`, etc.) :
-  logique d'agrégation SQL survolée via les handlers, non relue intégralement.
-- La **`Database Entities Documentation.md`** à la racine décrit un ancien modèle **TypeORM** (obsolète,
-  cf. 07-dette-technique) et ne reflète pas le schéma EF Core réel.
-
-## Sources analysées
-
-- Racine : `Lumineux.slnx`, `Directory.Build.props`, `Directory.Packages.props`, `PO_description.md`,
-  `Database Entities Documentation.md`, `.github/workflows/mobile-ci.yml`, `specs/` (liste), `.gitignore`.
-- `src/Lumineux.Domain/` : toutes les entités, enums, abstractions (survol).
-- `src/Lumineux.Application/` : DI, handlers métier clés, validators, options.
-- `src/Lumineux.Infrastructure/` : DbContext, configurations EF, repositories clés, sécurité, jobs, email.
-- `src/Lumineux.Api/` : `Program.cs`, middleware, controllers (routes/attributs), `CurrentUser`, appsettings.
-- `web/` : `package.json`, arborescence `src/app`, routes, session-store, intercepteur.
-- `mobile/` : `pubspec.yaml`, arborescence `lib/`, fichiers d'environnement.
+- `Lumineux.slnx`, `Directory.Build.props`, `Directory.Packages.props`
+- `Starter.md`, `PO_description.md`, `Database Entities Documentation.md`
+- `.github/workflows/dotnet-ci.yml`, `.github/workflows/mobile-ci.yml`
 </content>
 </invoke>
