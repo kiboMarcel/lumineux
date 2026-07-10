@@ -15,7 +15,7 @@ public sealed class LoginTests
     private static readonly DateTime Now = new(2026, 7, 3, 9, 0, 0, DateTimeKind.Utc);
 
     private readonly IMemberAccountRepository _accounts = Substitute.For<IMemberAccountRepository>();
-    private readonly IMemberPermissionRepository _permissions = Substitute.For<IMemberPermissionRepository>();
+    private readonly IEffectivePermissionsReader _permissions = Substitute.For<IEffectivePermissionsReader>();
     private readonly IPasswordHasher _hasher = Substitute.For<IPasswordHasher>();
     private readonly ITokenIssuer _tokenIssuer = Substitute.For<ITokenIssuer>();
     private readonly IClock _clock = Substitute.For<IClock>();
@@ -27,7 +27,7 @@ public sealed class LoginTests
         _hasher.Hash(Arg.Any<string>()).Returns("dummy");
         _tokenIssuer.Issue(Arg.Any<int>(), Arg.Any<string>(), Arg.Any<IReadOnlyCollection<string>>())
             .Returns(new IssuedToken("access-token", Now.AddMinutes(60)));
-        _permissions.GetPermissionsAsync(Arg.Any<int>(), Arg.Any<CancellationToken>())
+        _permissions.GetEffectivePermissionsAsync(Arg.Any<int>(), Arg.Any<CancellationToken>())
             .Returns(new List<string> { "manage_attendance" });
         return new LoginHandler(_accounts, _permissions, _hasher, _tokenIssuer, _clock, _audit,
             Options.Create(new AuthOptions()), new LoginValidator());

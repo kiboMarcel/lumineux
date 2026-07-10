@@ -24,7 +24,7 @@ public sealed class InstallFirstAdminHandler
     private readonly IMemberReferenceGenerator _referenceGenerator;
     private readonly IPasswordHasher _passwordHasher;
     private readonly IPermissionCatalog _catalog;
-    private readonly IMemberPermissionRepository _permissions;
+    private readonly IEffectivePermissionsReader _permissions;
     private readonly ITokenIssuer _tokenIssuer;
     private readonly IClock _clock;
     private readonly IAuditLogger _audit;
@@ -37,7 +37,7 @@ public sealed class InstallFirstAdminHandler
         IMemberReferenceGenerator referenceGenerator,
         IPasswordHasher passwordHasher,
         IPermissionCatalog catalog,
-        IMemberPermissionRepository permissions,
+        IEffectivePermissionsReader permissions,
         ITokenIssuer tokenIssuer,
         IClock clock,
         IAuditLogger audit,
@@ -123,7 +123,7 @@ public sealed class InstallFirstAdminHandler
         await _profiles.SaveChangesAsync(ct);
 
         // Post-save : EF a matérialisé les FK. Récupère les droits effectifs et émet le jeton.
-        var effective = await _permissions.GetPermissionsAsync(member.Id, ct);
+        var effective = await _permissions.GetEffectivePermissionsAsync(member.Id, ct);
         var token = _tokenIssuer.Issue(member.Id, member.FullName, effective);
 
         _audit.Operation("Setup.FirstAdminCreated", new { member.Id, member.Reference });

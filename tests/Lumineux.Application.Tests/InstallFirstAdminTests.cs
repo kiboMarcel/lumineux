@@ -31,7 +31,7 @@ public sealed class InstallFirstAdminTests
     private readonly IMemberReferenceGenerator _referenceGen = Substitute.For<IMemberReferenceGenerator>();
     private readonly IPasswordHasher _hasher = Substitute.For<IPasswordHasher>();
     private readonly IPermissionCatalog _catalog = new OpenCatalog();
-    private readonly IMemberPermissionRepository _permissions = Substitute.For<IMemberPermissionRepository>();
+    private readonly IEffectivePermissionsReader _permissions = Substitute.For<IEffectivePermissionsReader>();
     private readonly ITokenIssuer _tokenIssuer = Substitute.For<ITokenIssuer>();
     private readonly IClock _clock = Substitute.For<IClock>();
     private readonly IAuditLogger _audit = Substitute.For<IAuditLogger>();
@@ -44,7 +44,7 @@ public sealed class InstallFirstAdminTests
             .Returns("LUM-2026-00001");
         _tokenIssuer.Issue(Arg.Any<int>(), Arg.Any<string>(), Arg.Any<IReadOnlyCollection<string>>())
             .Returns(new IssuedToken("access-token", Now.AddMinutes(60)));
-        _permissions.GetPermissionsAsync(Arg.Any<int>(), Arg.Any<CancellationToken>())
+        _permissions.GetEffectivePermissionsAsync(Arg.Any<int>(), Arg.Any<CancellationToken>())
             .Returns(new List<string>
             {
                 Permissions.ManageAttendance, Permissions.ManageMembers, Permissions.ManageBureauProfiles,

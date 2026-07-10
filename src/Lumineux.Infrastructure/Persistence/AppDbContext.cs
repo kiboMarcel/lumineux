@@ -29,8 +29,6 @@ public class AppDbContext : DbContext
 
     public DbSet<District> Districts => Set<District>();
 
-    public DbSet<MemberPermission> MemberPermissions => Set<MemberPermission>();
-
     public DbSet<BureauProfile> BureauProfiles => Set<BureauProfile>();
 
     public DbSet<BureauProfilePermission> BureauProfilePermissions => Set<BureauProfilePermission>();

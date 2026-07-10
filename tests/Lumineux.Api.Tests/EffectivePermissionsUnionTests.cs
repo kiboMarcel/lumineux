@@ -11,14 +11,14 @@ using Xunit;
 namespace Lumineux.Api.Tests;
 
 /// <summary>
-/// Vérifie que le refactor de <see cref="IMemberPermissionRepository"/> (feature 004, T013) renvoie
+/// Vérifie que le refactor de <see cref="IEffectivePermissionsReader"/> (feature 004, T013) renvoie
 /// l'union des droits issus des profils du membre, sans doublon (FR-006, SC-005).
 /// </summary>
-public sealed class MemberPermissionRepositoryUnionTests : IClassFixture<ApiTestFixture>
+public sealed class EffectivePermissionsUnionTests : IClassFixture<ApiTestFixture>
 {
     private readonly ApiTestFixture _fixture;
 
-    public MemberPermissionRepositoryUnionTests(ApiTestFixture fixture) => _fixture = fixture;
+    public EffectivePermissionsUnionTests(ApiTestFixture fixture) => _fixture = fixture;
 
     [Fact]
     public async Task GetPermissions_returns_union_without_duplicates()
@@ -27,7 +27,7 @@ public sealed class MemberPermissionRepositoryUnionTests : IClassFixture<ApiTest
         using var scope = _fixture.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var catalog = scope.ServiceProvider.GetRequiredService<IPermissionCatalog>();
-        var repo = scope.ServiceProvider.GetRequiredService<IMemberPermissionRepository>();
+        var repo = scope.ServiceProvider.GetRequiredService<IEffectivePermissionsReader>();
 
         var member = new Member
         {
@@ -53,7 +53,7 @@ public sealed class MemberPermissionRepositoryUnionTests : IClassFixture<ApiTest
             new MemberBureauProfile { MemberId = member.Id, BureauProfileId = pMemAtt.Id });
         await db.SaveChangesAsync();
 
-        var perms = await repo.GetPermissionsAsync(member.Id);
+        var perms = await repo.GetEffectivePermissionsAsync(member.Id);
 
         perms.Should().BeEquivalentTo(new[] { Permissions.ManageAttendance, Permissions.ManageMembers });
         perms.Distinct().Count().Should().Be(perms.Count); // pas de doublon
@@ -64,7 +64,7 @@ public sealed class MemberPermissionRepositoryUnionTests : IClassFixture<ApiTest
     {
         using var scope = _fixture.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        var repo = scope.ServiceProvider.GetRequiredService<IMemberPermissionRepository>();
+        var repo = scope.ServiceProvider.GetRequiredService<IEffectivePermissionsReader>();
 
         var member = new Member
         {
@@ -79,7 +79,7 @@ public sealed class MemberPermissionRepositoryUnionTests : IClassFixture<ApiTest
         db.Members.Add(member);
         await db.SaveChangesAsync();
 
-        var perms = await repo.GetPermissionsAsync(member.Id);
+        var perms = await repo.GetEffectivePermissionsAsync(member.Id);
 
         perms.Should().BeEmpty();
     }

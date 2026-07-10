@@ -15,7 +15,7 @@ public sealed class LoginHandler
     private const string GenericFailure = "Identifiants invalides.";
 
     private readonly IMemberAccountRepository _accounts;
-    private readonly IMemberPermissionRepository _permissions;
+    private readonly IEffectivePermissionsReader _permissions;
     private readonly IPasswordHasher _passwordHasher;
     private readonly ITokenIssuer _tokenIssuer;
     private readonly IClock _clock;
@@ -25,7 +25,7 @@ public sealed class LoginHandler
 
     public LoginHandler(
         IMemberAccountRepository accounts,
-        IMemberPermissionRepository permissions,
+        IEffectivePermissionsReader permissions,
         IPasswordHasher passwordHasher,
         ITokenIssuer tokenIssuer,
         IClock clock,
@@ -90,7 +90,7 @@ public sealed class LoginHandler
             throw new UnauthorizedException(GenericFailure);
         }
 
-        var permissions = await _permissions.GetPermissionsAsync(account.MemberId, ct);
+        var permissions = await _permissions.GetEffectivePermissionsAsync(account.MemberId, ct);
         var token = _tokenIssuer.Issue(account.MemberId, account.Member.FullName, permissions);
 
         _audit.Operation("Login", new { account.MemberId });

@@ -248,7 +248,6 @@ public sealed class ApiTestFixture : WebApplicationFactory<Program>
         db.MemberBureauProfiles.RemoveRange(db.MemberBureauProfiles);
         db.BureauProfilePermissions.RemoveRange(db.BureauProfilePermissions);
         db.BureauProfiles.RemoveRange(db.BureauProfiles);
-        db.MemberPermissions.RemoveRange(db.MemberPermissions);
         db.MemberAccounts.RemoveRange(db.MemberAccounts);
 
         var seededId = SeededMemberId;

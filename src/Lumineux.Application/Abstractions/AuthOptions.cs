@@ -21,14 +21,4 @@ public sealed class AuthOptions
     /// construit <c>{base}?token={jeton}</c>.
     /// </summary>
     public string PasswordResetUrlBase { get; set; } = "https://localhost:4200/auth/reset-password";
-
-    /// <summary>Amorçage minimal des droits d'un compte bureau initial (feature 003, F1).</summary>
-    public BootstrapOptions Bootstrap { get; set; } = new();
-}
-
-public sealed class BootstrapOptions
-{
-    public string? MemberReference { get; set; }
-
-    public string[] Permissions { get; set; } = Array.Empty<string>();
 }

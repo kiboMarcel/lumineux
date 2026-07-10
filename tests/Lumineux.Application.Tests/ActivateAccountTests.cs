@@ -16,7 +16,7 @@ public sealed class ActivateAccountTests
     private static readonly DateTime Now = new(2026, 7, 3, 9, 0, 0, DateTimeKind.Utc);
 
     private readonly IMemberAccountRepository _accounts = Substitute.For<IMemberAccountRepository>();
-    private readonly IMemberPermissionRepository _permissions = Substitute.For<IMemberPermissionRepository>();
+    private readonly IEffectivePermissionsReader _permissions = Substitute.For<IEffectivePermissionsReader>();
     private readonly IPasswordHasher _hasher = Substitute.For<IPasswordHasher>();
     private readonly ITokenIssuer _tokenIssuer = Substitute.For<ITokenIssuer>();
     private readonly IClock _clock = Substitute.For<IClock>();
@@ -28,7 +28,7 @@ public sealed class ActivateAccountTests
         _hasher.Hash(Arg.Any<string>()).Returns("new-hash");
         _tokenIssuer.Issue(Arg.Any<int>(), Arg.Any<string>(), Arg.Any<IReadOnlyCollection<string>>())
             .Returns(new IssuedToken("access-token", Now.AddMinutes(60)));
-        _permissions.GetPermissionsAsync(Arg.Any<int>(), Arg.Any<CancellationToken>()).Returns(new List<string>());
+        _permissions.GetEffectivePermissionsAsync(Arg.Any<int>(), Arg.Any<CancellationToken>()).Returns(new List<string>());
         return new ActivateAccountHandler(_accounts, _permissions, _hasher, _tokenIssuer, _clock, _audit,
             Options.Create(new AuthOptions()), new ActivateAccountValidator(Options.Create(new AuthOptions())));
     }

@@ -55,12 +55,8 @@ public static class DependencyInjection
         // Feature 003 — authentification
         services.Configure<AuthOptions>(configuration.GetSection(AuthOptions.SectionName));
         services.AddScoped<ITokenIssuer, JwtTokenIssuer>();
-        services.AddScoped<IMemberPermissionRepository, MemberPermissionRepository>();
-        // ⚠️ DÉPRÉCIÉ (dettes M3/M4) : `member_permissions` + ce bootstrapper sont **transitoires**
-        // (migration 003 → 004). La source de vérité des droits est désormais les **profils du bureau**
-        // (les claims du jeton ne lisent QUE les profils). À retirer une fois la migration confirmée sur
-        // tous les environnements — voir docs/DEPLOIEMENT.md §3.
-        services.AddHostedService<PermissionBootstrapper>();
+        // Source unique des droits : les profils du bureau (feature 029, mécanisme hérité retiré).
+        services.AddScoped<IEffectivePermissionsReader, EffectivePermissionsReader>();
 
         // Feature 006 — mot de passe oublié
         services.AddScoped<IPasswordResetTokenRepository, PasswordResetTokenRepository>();
@@ -77,7 +73,6 @@ public static class DependencyInjection
         // Feature 004 — profils du bureau
         services.AddSingleton<IPermissionCatalog, PermissionCatalog>();
         services.AddScoped<IBureauProfileRepository, BureauProfileRepository>();
-        services.AddHostedService<BureauProfilesBootstrapper>();
 
         var emailProvider = configuration.GetSection($"{EmailOptions.SectionName}:Provider").Value ?? "Logging";
         if (string.Equals(emailProvider, "Smtp", StringComparison.OrdinalIgnoreCase))
