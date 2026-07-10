@@ -19,6 +19,29 @@ Constats **factuels** issus de la relecture, classés par impact :
 Aucun `TODO`/`HACK`/`FIXME` n'a été détecté dans le code source .NET relu (le code est
 abondamment commenté et référence les specs).
 
+## Statut de remédiation (2026-07-10, commit `1294cc0`)
+
+> Les constats ci-dessous sont conservés **tels que relevés** (registre historique). Le statut de
+> traitement à date :
+
+| # | Constat | Statut | Détail |
+|---|---------|--------|--------|
+| **C1** | Pas de CI .NET | ✅ **Résolu** | `.github/workflows/dotnet-ci.yml` (build + tests .NET **et** web, bloquant sur push/PR) |
+| **C2** | Clé JWT committée | ✅ **Résolu** (résiduel) | Clé retirée des `appsettings`, **fail-fast** au démarrage si absente/< 32 o, provisionnée via **user-secrets** (dev) / `Jwt__SigningKey` (prod). ⚠️ **Résiduel** : la clé dev reste dans l'**historique Git** — rotation/`git filter-repo` non effectués (décision à part) |
+| **M1** | Référence membre & concurrence | ✅ **Résolu** (minimum) | La violation d'unicité était **déjà traduite** en 409 par `MemberRepository` (pas de 500) ; détection **durcie** via m4. Retry/`SEQUENCE` = amélioration future non retenue |
+| **M2** | Doc données obsolète | ✅ **Résolu** | `Database Entities Documentation.md` remplacé par un pointeur vers `03-modele-donnees.md` |
+| **M3** | Permissions coexistantes | 🟡 **Documenté** | Dépréciation actée (commentaire DI + `docs/DEPLOIEMENT.md §3`). **Retrait effectif différé** (décision déploiement : migration confirmée sur tous les environnements) |
+| **M4** | Deux bootstrappers au démarrage | 🟡 **Documenté** | Idem M3 : documenté, retrait différé |
+| **m1** | `TestTokenIssuer` en prod | ✅ **Résolu** | Enregistré uniquement hors production (`!IsProduction()`) |
+| **m2** | Double autorisation | ✅ **Documenté** | Convention de défense en profondeur explicitée (`DEPLOIEMENT.md §5`) |
+| **m3** | Clés de durée de jeton | ✅ **Résolu** | Unifié sur `Auth:AccessTokenMinutes` ; `Jwt:ExpirationMinutes` retiré |
+| **m4** | Détection unicité par message | ✅ **Résolu** | Helper `DbUniqueViolation` (codes natifs 2601/2627 + repli message), partagé Attendance/Member |
+| **m5** | Migrations non documentées | ✅ **Résolu** | `docs/DEPLOIEMENT.md §2` |
+| **m6** | Artefacts non nettoyés | ⚪ **Caduc** | `mobile/env/*`, `template_mobile/` désormais **committés intentionnellement** |
+
+Reste ouvert : **C2 résiduel** (historique Git), **M3/M4** (retrait du code de migration transitoire).
+Tests après remédiation : .NET **385 verts** (Domain 64 / App 166 / Infra 23 / Api 132).
+
 ## Critique
 
 ### C1 — Aucune CI pour l'API .NET (tests non bloquants)
