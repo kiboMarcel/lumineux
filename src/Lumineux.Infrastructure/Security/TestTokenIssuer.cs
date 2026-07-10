@@ -1,6 +1,7 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
+using Lumineux.Application.Abstractions;
 using Lumineux.Domain.Abstractions;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
@@ -9,16 +10,19 @@ namespace Lumineux.Infrastructure.Security;
 
 /// <summary>
 /// Émetteur de jetons JWT pour le développement et les tests uniquement (research §5).
-/// L'émission définitive des jetons relève de la fonctionnalité d'authentification.
+/// **Non enregistré en production** (voir DependencyInjection, dette m1). L'émission définitive
+/// des jetons relève de la fonctionnalité d'authentification (<see cref="JwtTokenIssuer"/>).
 /// </summary>
 public sealed class TestTokenIssuer
 {
     private readonly JwtOptions _options;
+    private readonly AuthOptions _auth;
     private readonly IClock _clock;
 
-    public TestTokenIssuer(IOptions<JwtOptions> options, IClock clock)
+    public TestTokenIssuer(IOptions<JwtOptions> options, IOptions<AuthOptions> auth, IClock clock)
     {
         _options = options.Value;
+        _auth = auth.Value;
         _clock = clock;
     }
 
@@ -40,7 +44,7 @@ public sealed class TestTokenIssuer
             audience: _options.Audience,
             claims: claims,
             notBefore: now,
-            expires: now.AddMinutes(_options.ExpirationMinutes),
+            expires: now.AddMinutes(_auth.AccessTokenMinutes),
             signingCredentials: credentials);
 
         return new JwtSecurityTokenHandler().WriteToken(token);

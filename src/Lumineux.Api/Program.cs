@@ -20,7 +20,7 @@ builder.Host.UseSerilog((context, configuration) => configuration
 
 // --- Services applicatifs (Onion) ---
 builder.Services.AddApplication();
-builder.Services.AddInfrastructure(builder.Configuration);
+builder.Services.AddInfrastructure(builder.Configuration, builder.Environment);
 
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ICurrentUser, CurrentUser>();
@@ -100,6 +100,19 @@ builder.Services.AddCors(options =>
 });
 
 var app = builder.Build();
+
+// --- Garde-fou sécurité : clé de signature JWT obligatoire et suffisante (dette C2). ---
+// Lu APRÈS Build pour prendre en compte toutes les sources (user-secrets en dev, variables
+// d'environnement/secrets en prod, config injectée par les tests d'intégration). Aucune clé n'est
+// committée : démarrage refusé si absente/trop courte, pour éviter des jetons signés avec une clé vide.
+var signingKey = app.Configuration["Jwt:SigningKey"];
+if (string.IsNullOrWhiteSpace(signingKey) || Encoding.UTF8.GetByteCount(signingKey) < 32)
+{
+    throw new InvalidOperationException(
+        "Jwt:SigningKey manquante ou trop courte (min. 32 octets). Fournissez-la hors du code : "
+        + "`dotnet user-secrets set \"Jwt:SigningKey\" \"<clé>\"` en dev, ou variable d'environnement "
+        + "`Jwt__SigningKey` / magasin de secrets en production.");
+}
 
 app.UseMiddleware<ExceptionHandlingMiddleware>();
 app.UseMiddleware<CorrelationIdMiddleware>();

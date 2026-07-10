@@ -11,12 +11,14 @@ using Lumineux.Infrastructure.Time;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 
 namespace Lumineux.Infrastructure;
 
 public static class DependencyInjection
 {
-    public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
+    public static IServiceCollection AddInfrastructure(
+        this IServiceCollection services, IConfiguration configuration, IHostEnvironment environment)
     {
         services.Configure<JwtOptions>(configuration.GetSection(JwtOptions.SectionName));
         services.Configure<AutoCloseOptions>(configuration.GetSection(AutoCloseOptions.SectionName));
@@ -28,7 +30,13 @@ public static class DependencyInjection
 
         services.AddScoped<IAuditLogger, AuditLogger>();
         services.AddScoped<AuditInterceptor>();
-        services.AddScoped<TestTokenIssuer>();
+
+        // Émetteur de jetons dev/tests : **jamais** en production (dette m1). Les tests d'intégration
+        // tournent en environnement « Testing » (non-production) et le résolvent depuis la DI.
+        if (!environment.IsProduction())
+        {
+            services.AddScoped<TestTokenIssuer>();
+        }
 
         services.AddScoped<IAttendanceSessionRepository, AttendanceSessionRepository>();
         services.AddScoped<IAntennaReadRepository, AntennaReadRepository>();
@@ -48,6 +56,10 @@ public static class DependencyInjection
         services.Configure<AuthOptions>(configuration.GetSection(AuthOptions.SectionName));
         services.AddScoped<ITokenIssuer, JwtTokenIssuer>();
         services.AddScoped<IMemberPermissionRepository, MemberPermissionRepository>();
+        // ⚠️ DÉPRÉCIÉ (dettes M3/M4) : `member_permissions` + ce bootstrapper sont **transitoires**
+        // (migration 003 → 004). La source de vérité des droits est désormais les **profils du bureau**
+        // (les claims du jeton ne lisent QUE les profils). À retirer une fois la migration confirmée sur
+        // tous les environnements — voir docs/DEPLOIEMENT.md §3.
         services.AddHostedService<PermissionBootstrapper>();
 
         // Feature 006 — mot de passe oublié

@@ -1,0 +1,69 @@
+name: dotnet-ci
+
+# Gate CI de l'API .NET et de la console web (Principe III — tests bloquants).
+# Déclenché sur les changements du backend (src/, tests/) et de la SPA (web/).
+on:
+  push:
+    paths:
+      - 'src/**'
+      - 'tests/**'
+      - 'web/**'
+      - 'Lumineux.slnx'
+      - 'Directory.Build.props'
+      - 'Directory.Packages.props'
+      - '.github/workflows/dotnet-ci.yml'
+  pull_request:
+    paths:
+      - 'src/**'
+      - 'tests/**'
+      - 'web/**'
+      - 'Lumineux.slnx'
+      - 'Directory.Build.props'
+      - 'Directory.Packages.props'
+      - '.github/workflows/dotnet-ci.yml'
+
+jobs:
+  api-dotnet:
+    name: API .NET — build + tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configurer .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Restaurer
+        run: dotnet restore Lumineux.slnx
+
+      - name: Build (sans restauration)
+        run: dotnet build Lumineux.slnx --configuration Release --no-restore
+
+      - name: Tests (sans build)
+        run: dotnet test Lumineux.slnx --configuration Release --no-build --verbosity normal
+
+  web-angular:
+    name: Console web — build + tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configurer Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Installer les dépendances (déterministe)
+        run: npm ci
+
+      - name: Tests unitaires
+        run: npm test
+
+      - name: Build de production
+        run: npm run build

@@ -12,5 +12,6 @@ public sealed class JwtOptions
     /// <summary>Clé de signature symétrique. Fournie via secrets/variables d'environnement (jamais en dur).</summary>
     public string SigningKey { get; set; } = string.Empty;
 
-    public int ExpirationMinutes { get; set; } = 60;
+    // La durée de vie du jeton est unifiée sur Auth:AccessTokenMinutes (dette m3) — plus de clé
+    // Jwt:ExpirationMinutes redondante.
 }

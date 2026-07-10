@@ -48,16 +48,9 @@ public sealed class AttendanceRepository : IAttendanceRepository
         {
             await _db.SaveChangesAsync(ct);
         }
-        catch (DbUpdateException ex) when (IsUniqueViolation(ex))
+        catch (DbUpdateException ex) when (DbUniqueViolation.Is(ex))
         {
             throw new ConflictException("Présence déjà enregistrée pour cette session.");
         }
-    }
-
-    private static bool IsUniqueViolation(DbUpdateException ex)
-    {
-        var message = ex.InnerException?.Message ?? ex.Message;
-        return message.Contains("UNIQUE", StringComparison.OrdinalIgnoreCase)
-            || message.Contains("duplicate", StringComparison.OrdinalIgnoreCase);
     }
 }

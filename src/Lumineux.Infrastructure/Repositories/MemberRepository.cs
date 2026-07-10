@@ -67,16 +67,10 @@ public sealed class MemberRepository : IMemberRepository
         {
             await _db.SaveChangesAsync(ct);
         }
-        catch (DbUpdateException ex) when (IsUniqueViolation(ex))
+        catch (DbUpdateException ex) when (DbUniqueViolation.Is(ex))
         {
-            throw new ConflictException("Violation d'unicité (référence ou coordonnée déjà utilisée).");
+            // Course sur la référence membre (M1) ou coordonnée : message métier (409) plutôt qu'une 500.
+            throw new ConflictException("Violation d'unicité (référence ou coordonnée déjà utilisée), veuillez réessayer.");
         }
-    }
-
-    private static bool IsUniqueViolation(DbUpdateException ex)
-    {
-        var message = ex.InnerException?.Message ?? ex.Message;
-        return message.Contains("UNIQUE", StringComparison.OrdinalIgnoreCase)
-            || message.Contains("duplicate", StringComparison.OrdinalIgnoreCase);
     }
 }
