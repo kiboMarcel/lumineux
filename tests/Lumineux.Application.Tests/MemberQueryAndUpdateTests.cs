@@ -140,4 +140,72 @@ public sealed class MemberQueryAndUpdateTests
 
         await act.Should().ThrowAsync<ForbiddenException>();
     }
+
+    // ---- Feature 030 : profession ----
+
+    private void GivenUpdatableMember(Member member)
+    {
+        GivenManager();
+        _members.GetByIdAsync(7, Arg.Any<CancellationToken>()).Returns(member);
+        _lookup.AntennaExistsAsync(1, Arg.Any<CancellationToken>()).Returns(true);
+        _members.IsContactUsedByActiveAsync(Arg.Any<string>(), Arg.Any<string>(), 7, Arg.Any<CancellationToken>()).Returns(false);
+    }
+
+    [Fact]
+    public async Task Update_adds_profession_when_absent()
+    {
+        var member = Existing();
+        member.Profession = null;
+        GivenUpdatableMember(member);
+
+        var result = await UpdateHandler().HandleAsync(7, UpdateRequest with { Profession = "  Infirmier  " });
+
+        result.Profession.Should().Be("Infirmier"); // ajouté + trim
+    }
+
+    [Fact]
+    public async Task Update_replaces_existing_profession()
+    {
+        var member = Existing();
+        member.Profession = "Infirmier";
+        GivenUpdatableMember(member);
+
+        var result = await UpdateHandler().HandleAsync(7, UpdateRequest with { Profession = "Cadre" });
+
+        result.Profession.Should().Be("Cadre");
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("   ")]
+    public async Task Update_clears_profession_when_blank(string? input)
+    {
+        var member = Existing();
+        member.Profession = "Infirmier";
+        GivenUpdatableMember(member);
+
+        var result = await UpdateHandler().HandleAsync(7, UpdateRequest with { Profession = input });
+
+        result.Profession.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task Update_accepts_profession_at_max_length()
+    {
+        GivenUpdatableMember(Existing());
+
+        var act = () => UpdateHandler().HandleAsync(7, UpdateRequest with { Profession = new string('a', 150) });
+
+        await act.Should().NotThrowAsync();
+    }
+
+    [Fact]
+    public async Task Update_rejects_profession_over_max_length()
+    {
+        GivenUpdatableMember(Existing());
+
+        var act = () => UpdateHandler().HandleAsync(7, UpdateRequest with { Profession = new string('a', 151) });
+
+        await act.Should().ThrowAsync<FluentValidation.ValidationException>();
+    }
 }

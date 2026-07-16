@@ -127,6 +127,10 @@ import { CreateMemberRequest, CredentialsDelivery, MemberCreatedResponse } from 
             <label for="address">Adresse</label>
             <input id="address" type="text" formControlName="address" />
           </div>
+          <div class="lx-field lx-field-full">
+            <label for="profession">Profession</label>
+            <input id="profession" type="text" maxlength="150" formControlName="profession" />
+          </div>
           </div>
 
           <button type="submit" class="lx-btn" [disabled]="form.invalid || loading() || noAntenna()">
@@ -175,6 +179,7 @@ export class MemberFormComponent {
     districtId: this.fb.control<number | null>(null),
     nationalityId: this.fb.control<number | null>(null),
     address: [''],
+    profession: ['', Validators.maxLength(150)],
   });
 
   constructor() {
@@ -215,6 +220,7 @@ export class MemberFormComponent {
         districtId: m.districtId ?? null,
         nationalityId: m.nationalityId ?? null,
         address: m.address ?? '',
+        profession: m.profession ?? '',
       });
     });
   }
@@ -243,6 +249,7 @@ export class MemberFormComponent {
       districtId: v.districtId,
       nationalityId: v.nationalityId,
       address: v.address || null,
+      profession: v.profession?.trim() || null,
     };
 
     if (this.isEdit()) {

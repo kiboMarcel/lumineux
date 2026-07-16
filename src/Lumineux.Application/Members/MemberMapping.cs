@@ -24,6 +24,7 @@ internal static class MemberMapping
             m.DistrictId,
             m.NationalityId,
             m.IntroducerId,
+            m.Profession,
             m.Status,
             account?.ActivationState.ToString() ?? Domain.Enums.AccountActivationState.PendingActivation.ToString());
 

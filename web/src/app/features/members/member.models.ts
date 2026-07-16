@@ -39,6 +39,7 @@ export interface MemberResponse {
   districtId?: number | null;
   nationalityId?: number | null;
   introducerId?: number | null;
+  profession?: string | null;
   status: string;
   accountActivationState: string;
 }
@@ -59,6 +60,7 @@ export interface CreateMemberRequest {
   districtId?: number | null;
   nationalityId?: number | null;
   introducerId?: number | null;
+  profession?: string | null;
   confirmDuplicate?: boolean;
 }
 

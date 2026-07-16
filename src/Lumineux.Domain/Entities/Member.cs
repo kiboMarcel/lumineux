@@ -35,6 +35,9 @@ public class Member : AbstractEntity
 
     public string? Address { get; set; }
 
+    /// <summary>Profession du membre (feature 030), texte libre optionnel borné. Aucune unicité.</summary>
+    public string? Profession { get; set; }
+
     public int? DistrictId { get; set; }
 
     public int? NationalityId { get; set; }

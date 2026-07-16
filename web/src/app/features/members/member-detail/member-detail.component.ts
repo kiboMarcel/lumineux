@@ -26,6 +26,7 @@ import { MemberResponse } from '../member.models';
           <dt class="lx-muted">Sexe</dt><dd>{{ m.gender }}</dd>
           <dt class="lx-muted">Mobile</dt><dd>{{ m.mobile || '—' }}</dd>
           <dt class="lx-muted">E-mail</dt><dd>{{ m.email || '—' }}</dd>
+          <dt class="lx-muted">Profession</dt><dd>{{ m.profession || '—' }}</dd>
           <dt class="lx-muted">Statut</dt><dd>{{ m.status }}</dd>
           <dt class="lx-muted">Activation du compte</dt><dd>{{ m.accountActivationState }}</dd>
         </dl>

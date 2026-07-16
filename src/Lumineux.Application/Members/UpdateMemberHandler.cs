@@ -69,6 +69,7 @@ public sealed class UpdateMemberHandler
         member.BirthPlaceId = request.BirthPlaceId;
         member.BirthCityId = request.BirthCityId;
         member.Address = request.Address;
+        member.Profession = string.IsNullOrWhiteSpace(request.Profession) ? null : request.Profession.Trim();
         member.DistrictId = request.DistrictId;
         member.NationalityId = request.NationalityId;
         member.IntroducerId = request.IntroducerId;

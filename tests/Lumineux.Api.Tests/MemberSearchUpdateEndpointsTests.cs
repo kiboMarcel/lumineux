@@ -92,4 +92,31 @@ public sealed class MemberSearchUpdateEndpointsTests : IClassFixture<ApiTestFixt
 
         response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
     }
+
+    // ---- Feature 030 : profession (correction) ----
+
+    [Fact]
+    public async Task Update_sets_then_clears_profession()
+    {
+        var client = ManagerClient();
+        var id = await CreateAsync(client, "Kabore", "Ines", "ines.kabore.upd@example.com");
+
+        // Renseigner la profession
+        var set = await client.PutAsJsonAsync($"/api/v1/members/{id}",
+            new { lastName = "Kabore", firstName = "Ines", gender = "F", email = "ines.kabore.upd@example.com", antennaId = ApiTestFixture.SeededAntennaId, profession = "  Infirmière  " });
+        set.StatusCode.Should().Be(HttpStatusCode.OK);
+        using (var doc = JsonDocument.Parse(await set.Content.ReadAsStringAsync()))
+        {
+            doc.RootElement.GetProperty("profession").GetString().Should().Be("Infirmière"); // trim
+        }
+
+        // Effacer la profession (null → absence)
+        var clear = await client.PutAsJsonAsync($"/api/v1/members/{id}",
+            new { lastName = "Kabore", firstName = "Ines", gender = "F", email = "ines.kabore.upd@example.com", antennaId = ApiTestFixture.SeededAntennaId, profession = (string?)null });
+        clear.StatusCode.Should().Be(HttpStatusCode.OK);
+        using (var doc = JsonDocument.Parse(await clear.Content.ReadAsStringAsync()))
+        {
+            doc.RootElement.GetProperty("profession").ValueKind.Should().Be(JsonValueKind.Null);
+        }
+    }
 }

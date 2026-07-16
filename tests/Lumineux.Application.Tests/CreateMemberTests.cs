@@ -122,4 +122,59 @@ public sealed class CreateMemberTests
 
         await act.Should().ThrowAsync<FluentValidation.ValidationException>();
     }
+
+    // ---- Feature 030 : profession ----
+
+    [Theory]
+    [InlineData("  Enseignant  ", "Enseignant")]      // trim des bords
+    [InlineData("Chargé d'affaires", "Chargé d'affaires")] // accent + apostrophe conservés (U1)
+    public async Task Create_normalizes_and_keeps_profession(string input, string expected)
+    {
+        GivenManager();
+        Member? captured = null;
+        await _members.AddAsync(Arg.Do<Member>(m => captured = m), Arg.Any<CancellationToken>());
+        var request = WithEmail with { Profession = input };
+
+        await CreateHandler().HandleAsync(request);
+
+        captured!.Profession.Should().Be(expected);
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")] // espaces seuls → absence de profession
+    public async Task Create_stores_null_profession_when_blank(string? input)
+    {
+        GivenManager();
+        Member? captured = null;
+        await _members.AddAsync(Arg.Do<Member>(m => captured = m), Arg.Any<CancellationToken>());
+        var request = WithEmail with { Profession = input };
+
+        await CreateHandler().HandleAsync(request);
+
+        captured!.Profession.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task Create_accepts_profession_at_max_length()
+    {
+        GivenManager();
+        var request = WithEmail with { Profession = new string('a', 150) };
+
+        var act = () => CreateHandler().HandleAsync(request);
+
+        await act.Should().NotThrowAsync();
+    }
+
+    [Fact]
+    public async Task Create_rejects_profession_over_max_length()
+    {
+        GivenManager();
+        var request = WithEmail with { Profession = new string('a', 151) };
+
+        var act = () => CreateHandler().HandleAsync(request);
+
+        await act.Should().ThrowAsync<FluentValidation.ValidationException>();
+    }
 }

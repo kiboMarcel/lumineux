@@ -15,7 +15,8 @@ public sealed record UpdateMemberRequest(
     string? Address,
     int? DistrictId,
     int? NationalityId,
-    int? IntroducerId);
+    int? IntroducerId,
+    string? Profession = null);
 
 /// <summary>Élément de liste de membres (recherche).</summary>
 public sealed record MemberListItem(

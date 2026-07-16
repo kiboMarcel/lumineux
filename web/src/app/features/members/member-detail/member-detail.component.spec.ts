@@ -35,4 +35,37 @@ describe('MemberDetailComponent (US1)', () => {
     const comp = setup();
     expect(comp.notFound()).toBe(true);
   });
+
+  // ---- Feature 030 : profession ----
+
+  function setupFixture() {
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({
+      providers: [
+        provideRouter([]),
+        { provide: MembersApi, useValue: api },
+        { provide: ActivatedRoute, useValue: { snapshot: { paramMap: convertToParamMap({ id: '7' }) } } },
+      ],
+    });
+    return TestBed.createComponent(MemberDetailComponent);
+  }
+
+  it('affiche la profession quand elle est renseignée', () => {
+    api.get.mockReturnValue(of({ id: 7, reference: 'LUM-7', firstName: 'Jane', lastName: 'Doe', status: 'Active', profession: 'Enseignante' }));
+    const fixture = setupFixture();
+    fixture.detectChanges();
+    const text = (fixture.nativeElement as HTMLElement).textContent ?? '';
+    expect(text).toContain('Profession');
+    expect(text).toContain('Enseignante');
+  });
+
+  it('affiche un repli « — » quand la profession est absente', () => {
+    api.get.mockReturnValue(of({ id: 7, reference: 'LUM-7', firstName: 'Jane', lastName: 'Doe', status: 'Active', profession: null }));
+    const fixture = setupFixture();
+    fixture.detectChanges();
+    const dds = Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('dt'));
+    const professionDt = dds.find((dt) => dt.textContent?.trim() === 'Profession');
+    expect(professionDt).toBeTruthy();
+    expect(professionDt!.nextElementSibling?.textContent?.trim()).toBe('—');
+  });
 });

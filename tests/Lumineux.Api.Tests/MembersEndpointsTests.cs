@@ -108,4 +108,67 @@ public sealed class MembersEndpointsTests : IClassFixture<ApiTestFixture>
 
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
+
+    // ---- Feature 030 : profession ----
+
+    [Fact]
+    public async Task Create_with_profession_returns_it()
+    {
+        var client = ManagerClient();
+        var body = new
+        {
+            lastName = "Kone", firstName = "Awa", gender = "F",
+            email = "awa.kone.prof@example.com", antennaId = ApiTestFixture.SeededAntennaId,
+            profession = "Enseignante",
+        };
+
+        var response = await client.PostAsJsonAsync("/api/v1/members", body);
+        response.StatusCode.Should().Be(HttpStatusCode.Created);
+
+        using var doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        doc.RootElement.GetProperty("member").GetProperty("profession").GetString().Should().Be("Enseignante");
+    }
+
+    [Fact]
+    public async Task Create_without_profession_returns_null_profession()
+    {
+        // Régression SC-004 : un membre sans profession se lit avec profession null (via GET).
+        var client = ManagerClient();
+        var body = new
+        {
+            lastName = "Yao", firstName = "Kofi", gender = "M",
+            email = "kofi.yao.noprof@example.com", antennaId = ApiTestFixture.SeededAntennaId,
+        };
+
+        var create = await client.PostAsJsonAsync("/api/v1/members", body);
+        create.StatusCode.Should().Be(HttpStatusCode.Created);
+        using var created = JsonDocument.Parse(await create.Content.ReadAsStringAsync());
+        created.RootElement.GetProperty("member").GetProperty("profession").ValueKind.Should().Be(JsonValueKind.Null);
+        var id = created.RootElement.GetProperty("member").GetProperty("id").GetInt32();
+
+        var get = await client.GetAsync($"/api/v1/members/{id}");
+        get.StatusCode.Should().Be(HttpStatusCode.OK);
+        using var read = JsonDocument.Parse(await get.Content.ReadAsStringAsync());
+        read.RootElement.GetProperty("profession").ValueKind.Should().Be(JsonValueKind.Null);
+    }
+
+    [Fact]
+    public async Task Two_members_can_share_the_same_profession()
+    {
+        // FR-010 : aucune contrainte d'unicité sur la profession.
+        var client = ManagerClient();
+        var first = new
+        {
+            lastName = "Diallo", firstName = "Sara", gender = "F",
+            email = "sara.diallo.job@example.com", antennaId = ApiTestFixture.SeededAntennaId, profession = "Commerçant",
+        };
+        var second = new
+        {
+            lastName = "Bah", firstName = "Moussa", gender = "M",
+            email = "moussa.bah.job@example.com", antennaId = ApiTestFixture.SeededAntennaId, profession = "Commerçant",
+        };
+
+        (await client.PostAsJsonAsync("/api/v1/members", first)).StatusCode.Should().Be(HttpStatusCode.Created);
+        (await client.PostAsJsonAsync("/api/v1/members", second)).StatusCode.Should().Be(HttpStatusCode.Created);
+    }
 }

@@ -83,6 +83,23 @@ describe('MemberFormComponent — création (US2)', () => {
     comp.submit(false);
     expect(membersApi.create).not.toHaveBeenCalled();
   });
+
+  it('envoie la profession nettoyée (trim) — feature 030', () => {
+    membersApi.create.mockReturnValue(of({ member: { id: 9, reference: 'LUM-9' }, loginId: 'LUM-9', credentialsDelivery: 'EmailSent' }));
+    const comp = setup();
+    fillValid(comp);
+    comp.form.patchValue({ profession: '  Enseignant  ' });
+    comp.submit(false);
+    expect(membersApi.create.mock.calls[0][0]).toMatchObject({ profession: 'Enseignant' });
+  });
+
+  it('envoie profession null quand le champ est vide — feature 030', () => {
+    membersApi.create.mockReturnValue(of({ member: { id: 9, reference: 'LUM-9' }, loginId: 'LUM-9', credentialsDelivery: 'EmailSent' }));
+    const comp = setup();
+    fillValid(comp);
+    comp.submit(false);
+    expect(membersApi.create.mock.calls[0][0].profession).toBeNull();
+  });
 });
 
 describe('MemberFormComponent — édition (US3)', () => {
@@ -103,5 +120,21 @@ describe('MemberFormComponent — édition (US3)', () => {
     comp.submit(false);
     expect(membersApi.update).toHaveBeenCalledWith(5, expect.objectContaining({ lastName: 'Doe' }));
     expect(navSpy).toHaveBeenCalledWith(['/members', 5]);
+  });
+
+  it('précharge la profession puis l\'efface en envoyant null — feature 030', () => {
+    membersApi.get.mockReturnValue(of({
+      id: 5, reference: 'LUM-5', lastName: 'Doe', firstName: 'Jane', gender: 'F', antennaId: 1, status: 'Active', profession: 'Infirmier',
+    }));
+    membersApi.update.mockReturnValue(of({ id: 5 }));
+    const comp = setup({ id: '5' });
+
+    expect(comp.form.getRawValue().profession).toBe('Infirmier'); // préchargée
+
+    comp.form.patchValue({ profession: '' }); // effacement
+    const router = TestBed.inject(Router);
+    vi.spyOn(router, 'navigate').mockResolvedValue(true);
+    comp.submit(false);
+    expect(membersApi.update.mock.calls[0][1].profession).toBeNull();
   });
 });

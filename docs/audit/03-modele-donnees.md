@@ -47,6 +47,7 @@ erDiagram
         string first_name
         string gender
         int antenna FK
+        string profession "nullable, ≤150"
         string status
     }
     MEMBER_ACCOUNTS {
@@ -194,14 +195,16 @@ modification, l'acteur étant `MemberId` du jeton courant, sinon `UserName`, sin
 
 ## Stratégie de migration
 
-- 11 migrations horodatées sous `Persistence/Migrations/`, de `InitialAttendance`
-  (2026-07-02) à `RemoveMemberPermissions` (2026-07-10). L'historique reflète
+- 12 migrations horodatées sous `Persistence/Migrations/`, de `InitialAttendance`
+  (2026-07-02) à `MemberProfession` (2026-07-16). L'historique reflète
   l'incrémentalité par feature : `AddAttendances`, `MemberRegistration`,
   `Authentication`, `BureauProfiles`, `PasswordReset`, `AntennaCodeUnique`,
-  `CancelSession`, `RemoveMemberPermissions`.
-- La dernière migration (`RemoveMemberPermissions`) matérialise la **consolidation
+  `CancelSession`, `RemoveMemberPermissions`, `MemberProfession`.
+- L'avant-dernière migration (`RemoveMemberPermissions`) matérialise la **consolidation
   RBAC** (feature 029) : le mécanisme de permissions directes par membre a été
   retiré au profit des seuls profils du bureau (cf. `EffectivePermissionsReader.cs`).
+- La dernière migration (`MemberProfession`, feature 030) ajoute la colonne
+  additive `members.profession` (`nvarchar(150)`, nullable, sans unicité ni index).
 - `AppDbContextFactory` fournit un contexte design-time pour `dotnet ef`.
 
 ## Sources analysées

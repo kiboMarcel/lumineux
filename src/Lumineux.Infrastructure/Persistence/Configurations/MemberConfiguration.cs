@@ -23,6 +23,7 @@ public sealed class MemberConfiguration : IEntityTypeConfiguration<Member>
         builder.Property(x => x.Mobile).HasColumnName("mobile").HasMaxLength(255);
         builder.Property(x => x.Email).HasColumnName("email").HasMaxLength(255);
         builder.Property(x => x.Address).HasColumnName("address").HasMaxLength(255);
+        builder.Property(x => x.Profession).HasColumnName("profession").HasMaxLength(150);
         builder.Property(x => x.DistrictId).HasColumnName("district");
         builder.Property(x => x.NationalityId).HasColumnName("nationality");
         builder.Property(x => x.IntroducerId).HasColumnName("introducer");

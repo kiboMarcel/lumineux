@@ -16,6 +16,7 @@ public sealed record CreateMemberRequest(
     int? DistrictId,
     int? NationalityId,
     int? IntroducerId,
+    string? Profession = null,
     bool ConfirmDuplicate = false);
 
 /// <summary>Vue d'un membre exposée (aucun secret / hash).</summary>
@@ -37,6 +38,7 @@ public sealed record MemberResponse(
     int? DistrictId,
     int? NationalityId,
     int? IntroducerId,
+    string? Profession,
     string Status,
     string AccountActivationState);
 

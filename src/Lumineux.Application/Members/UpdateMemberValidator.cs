@@ -16,5 +16,9 @@ public sealed class UpdateMemberValidator : AbstractValidator<UpdateMemberReques
             .Must(x => !string.IsNullOrWhiteSpace(x.Mobile) || !string.IsNullOrWhiteSpace(x.Email))
             .WithMessage("Au moins une coordonnée de contact (mobile ou e-mail) est requise.");
         RuleFor(x => x.Email).EmailAddress().When(x => !string.IsNullOrWhiteSpace(x.Email));
+
+        RuleFor(x => x.Profession)
+            .MaximumLength(150).WithMessage("La profession ne doit pas dépasser 150 caractères.")
+            .When(x => x.Profession is not null);
     }
 }
