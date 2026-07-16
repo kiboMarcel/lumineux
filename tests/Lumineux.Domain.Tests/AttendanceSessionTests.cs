@@ -107,4 +107,42 @@ public sealed class AttendanceSessionTests
         var act = () => session.Cancel(7, Now.AddMinutes(2));
         act.Should().Throw<ConflictException>();
     }
+
+    // Feature 031 — type de session
+
+    [Fact]
+    public void Start_without_type_defaults_to_antenna_meeting()
+    {
+        var session = AttendanceSession.Start(1, Now.Date, 42, "secret", 30, Now);
+
+        session.SessionType.Should().Be(SessionType.AntennaMeeting);
+    }
+
+    [Fact]
+    public void Start_with_teaching_keeps_it_without_side_effects()
+    {
+        // C1 : Teaching accepté structurellement, aucun effet sur le reste du cycle.
+        var session = AttendanceSession.Start(1, Now.Date, 42, "secret", 30, Now, SessionType.Teaching);
+
+        session.SessionType.Should().Be(SessionType.Teaching);
+        session.Status.Should().Be(SessionStatus.Open); // comportement identique à AntennaMeeting
+        session.IsOpen.Should().BeTrue();
+    }
+
+    [Fact]
+    public void Session_type_is_immutable_across_transitions()
+    {
+        var session = AttendanceSession.Start(1, Now.Date, 42, "secret", 30, Now, SessionType.Teaching);
+
+        session.Close(7, Now.AddHours(1));
+        session.SessionType.Should().Be(SessionType.Teaching);
+
+        var cancelled = AttendanceSession.Start(2, Now.Date, 42, "secret", 30, Now, SessionType.Teaching);
+        cancelled.Cancel(7, Now.AddMinutes(2));
+        cancelled.SessionType.Should().Be(SessionType.Teaching);
+
+        var auto = AttendanceSession.Start(3, Now.Date, 42, "secret", 30, Now, SessionType.Teaching);
+        auto.AutoClose(Now.AddHours(3));
+        auto.SessionType.Should().Be(SessionType.Teaching);
+    }
 }

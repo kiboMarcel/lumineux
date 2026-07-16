@@ -22,6 +22,9 @@ public class AttendanceSession : AbstractEntity
 
     public SessionStatus Status { get; private set; }
 
+    /// <summary>Nature de la session (feature 031). Fixée à la création, immuable ensuite.</summary>
+    public SessionType SessionType { get; private set; }
+
     public int OpenedByMemberId { get; private set; }
 
     public int? ClosedByMemberId { get; private set; }
@@ -49,7 +52,8 @@ public class AttendanceSession : AbstractEntity
         int openedByMemberId,
         string qrSecret,
         int qrStepSeconds,
-        DateTime nowUtc)
+        DateTime nowUtc,
+        SessionType sessionType = SessionType.AntennaMeeting)
     {
         if (antennaId <= 0)
         {
@@ -78,6 +82,7 @@ public class AttendanceSession : AbstractEntity
             MeetingDate = meetingDate,
             StartTime = nowUtc,
             Status = SessionStatus.Open,
+            SessionType = sessionType,
             OpenedByMemberId = openedByMemberId,
             QrSecret = qrSecret,
             QrStepSeconds = qrStepSeconds,

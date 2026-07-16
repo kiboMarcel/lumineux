@@ -22,6 +22,8 @@ export interface SessionResponse {
   openedByMemberId: number;
   closedByMemberId?: number | null;
   attendanceCount: number;
+  /** Nature de la session (feature 031). Contrat exposé ; non affiché pour l'instant. */
+  sessionType: string;
 }
 
 /**

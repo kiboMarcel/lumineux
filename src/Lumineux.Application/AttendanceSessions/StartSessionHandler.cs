@@ -3,6 +3,7 @@ using Lumineux.Application.Abstractions;
 using Lumineux.Application.Contracts.Sessions;
 using Lumineux.Domain.Abstractions;
 using Lumineux.Domain.Entities;
+using Lumineux.Domain.Enums;
 
 namespace Lumineux.Application.AttendanceSessions;
 
@@ -61,14 +62,18 @@ public sealed class StartSessionHandler
         }
 
         var step = request.QrStepSeconds ?? DefaultQrStepSeconds;
+        // Type validé en amont ; absent → défaut AntennaMeeting (feature 031).
+        var sessionType = request.SessionType is null
+            ? SessionType.AntennaMeeting
+            : Enum.Parse<SessionType>(request.SessionType, ignoreCase: false);
         var secret = _qr.GenerateSecret();
         var session = AttendanceSession.Start(
-            request.AntennaId, request.MeetingDate, memberId, secret, step, _clock.UtcNow);
+            request.AntennaId, request.MeetingDate, memberId, secret, step, _clock.UtcNow, sessionType);
 
         await _sessions.AddAsync(session, ct);
         await _sessions.SaveChangesAsync(ct);
 
-        _audit.Operation("StartSession", new { session.Id, session.AntennaId });
+        _audit.Operation("StartSession", new { session.Id, session.AntennaId, session.SessionType });
         return session.ToResponse();
     }
 }

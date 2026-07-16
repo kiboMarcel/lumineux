@@ -15,5 +15,6 @@ internal static class SessionMapping
             s.Status.ToString(),
             s.OpenedByMemberId,
             s.ClosedByMemberId,
-            attendanceCount);
+            attendanceCount,
+            s.SessionType.ToString());
 }

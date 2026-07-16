@@ -7,7 +7,7 @@ import { AttendanceSessionsApi } from '../../../core/api/attendance-sessions-api
 import { AttendancesApi } from '../../../core/api/attendances-api';
 import { SessionRunComponent } from './session-run.component';
 
-const openSession = { id: 7, antennaId: 1, meetingDate: '2026-07-05', startTime: 't', status: 'Open', openedByMemberId: 1, attendanceCount: 0 };
+const openSession = { id: 7, antennaId: 1, meetingDate: '2026-07-05', startTime: 't', status: 'Open', openedByMemberId: 1, attendanceCount: 0, sessionType: 'AntennaMeeting' };
 const closedSession = { ...openSession, status: 'Closed', endTime: '2026-07-05T12:00:00Z' };
 const list = (validCount = 0, items: unknown[] = []) => ({ sessionId: 7, validCount, items });
 

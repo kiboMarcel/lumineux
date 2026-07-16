@@ -4,6 +4,7 @@ using Lumineux.Application.AttendanceSessions;
 using Lumineux.Application.Contracts.Sessions;
 using Lumineux.Domain.Abstractions;
 using Lumineux.Domain.Entities;
+using Lumineux.Domain.Enums;
 using NSubstitute;
 using Xunit;
 
@@ -98,5 +99,60 @@ public sealed class StartSessionTests
         var act = () => handler.HandleAsync(new StartSessionRequest(1, Now.Date, QrStepSeconds: 5));
 
         await act.Should().ThrowAsync<FluentValidation.ValidationException>();
+    }
+
+    // Feature 031 — type de session
+
+    private void GivenStartable()
+    {
+        GivenAuthorizedBureau();
+        _antennas.ExistsAsync(1, Arg.Any<CancellationToken>()).Returns(true);
+        _sessions.HasOpenSessionAsync(1, Now.Date, Arg.Any<CancellationToken>()).Returns(false);
+    }
+
+    [Fact]
+    public async Task Start_without_type_maps_to_antenna_meeting()
+    {
+        GivenStartable();
+
+        var result = await CreateHandler().HandleAsync(ValidRequest);
+
+        result.SessionType.Should().Be(nameof(SessionType.AntennaMeeting)); // mapping T007
+    }
+
+    [Fact]
+    public async Task Start_with_teaching_is_persisted_and_returned()
+    {
+        GivenStartable();
+        AttendanceSession? captured = null;
+        await _sessions.AddAsync(Arg.Do<AttendanceSession>(s => captured = s), Arg.Any<CancellationToken>());
+
+        var result = await CreateHandler().HandleAsync(ValidRequest with { SessionType = "Teaching" });
+
+        result.SessionType.Should().Be("Teaching");
+        captured!.SessionType.Should().Be(SessionType.Teaching);
+    }
+
+    [Fact]
+    public async Task Start_with_unknown_type_throws_validation()
+    {
+        GivenStartable();
+
+        var act = () => CreateHandler().HandleAsync(ValidRequest with { SessionType = "Party" });
+
+        await act.Should().ThrowAsync<FluentValidation.ValidationException>();
+        await _sessions.DidNotReceive().AddAsync(Arg.Any<AttendanceSession>(), Arg.Any<CancellationToken>());
+    }
+
+    [Theory]
+    [InlineData("AntennaMeeting")]
+    [InlineData("Teaching")]
+    public async Task Start_accepts_each_known_type(string type)
+    {
+        GivenStartable();
+
+        var result = await CreateHandler().HandleAsync(ValidRequest with { SessionType = type });
+
+        result.SessionType.Should().Be(type);
     }
 }

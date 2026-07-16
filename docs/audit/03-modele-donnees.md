@@ -74,6 +74,7 @@ erDiagram
         datetime start_time
         datetime end_time
         string status
+        string session_type "défaut AntennaMeeting"
         string qr_secret
         int qr_step_seconds
     }
@@ -195,16 +196,20 @@ modification, l'acteur étant `MemberId` du jeton courant, sinon `UserName`, sin
 
 ## Stratégie de migration
 
-- 12 migrations horodatées sous `Persistence/Migrations/`, de `InitialAttendance`
-  (2026-07-02) à `MemberProfession` (2026-07-16). L'historique reflète
+- 13 migrations horodatées sous `Persistence/Migrations/`, de `InitialAttendance`
+  (2026-07-02) à `SessionType` (2026-07-16). L'historique reflète
   l'incrémentalité par feature : `AddAttendances`, `MemberRegistration`,
   `Authentication`, `BureauProfiles`, `PasswordReset`, `AntennaCodeUnique`,
-  `CancelSession`, `RemoveMemberPermissions`, `MemberProfession`.
-- L'avant-dernière migration (`RemoveMemberPermissions`) matérialise la **consolidation
+  `CancelSession`, `RemoveMemberPermissions`, `MemberProfession`, `SessionType`.
+- La migration `RemoveMemberPermissions` matérialise la **consolidation
   RBAC** (feature 029) : le mécanisme de permissions directes par membre a été
   retiré au profit des seuls profils du bureau (cf. `EffectivePermissionsReader.cs`).
-- La dernière migration (`MemberProfession`, feature 030) ajoute la colonne
+- La migration `MemberProfession` (feature 030) ajoute la colonne
   additive `members.profession` (`nvarchar(150)`, nullable, sans unicité ni index).
+- La dernière migration (`SessionType`, feature 031) ajoute la colonne
+  `attendance_sessions.session_type` (`nvarchar(20)`, NOT NULL, **valeur par défaut
+  `AntennaMeeting`** rétro-remplissant l'existant) — discriminant de la nature d'une
+  session, préparant le futur domaine des enseignements.
 - `AppDbContextFactory` fournit un contexte design-time pour `dotnet ef`.
 
 ## Sources analysées

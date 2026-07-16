@@ -80,6 +80,51 @@ public sealed class AttendanceSessionsEndpointsTests : IClassFixture<ApiTestFixt
         second.StatusCode.Should().Be(HttpStatusCode.Conflict);
     }
 
+    // Feature 031 — type de session
+
+    [Fact]
+    public async Task StartSession_without_type_defaults_to_antenna_meeting()
+    {
+        var client = CreateBureauClient();
+
+        var create = await client.PostAsJsonAsync(
+            "/api/v1/attendance-sessions", NewSessionBody("2026-11-03T09:00:00Z"));
+        create.StatusCode.Should().Be(HttpStatusCode.Created);
+
+        using var created = JsonDocument.Parse(await create.Content.ReadAsStringAsync());
+        created.RootElement.GetProperty("sessionType").GetString().Should().Be("AntennaMeeting");
+        var id = created.RootElement.GetProperty("id").GetInt32();
+
+        var get = await client.GetAsync($"/api/v1/attendance-sessions/{id}");
+        get.StatusCode.Should().Be(HttpStatusCode.OK);
+        using var read = JsonDocument.Parse(await get.Content.ReadAsStringAsync());
+        read.RootElement.GetProperty("sessionType").GetString().Should().Be("AntennaMeeting");
+    }
+
+    [Fact]
+    public async Task StartSession_with_teaching_type_is_kept()
+    {
+        var client = CreateBureauClient();
+        var body = new { antennaId = ApiTestFixture.SeededAntennaId, meetingDate = "2026-11-04T09:00:00Z", qrStepSeconds = 30, sessionType = "Teaching" };
+
+        var create = await client.PostAsJsonAsync("/api/v1/attendance-sessions", body);
+        create.StatusCode.Should().Be(HttpStatusCode.Created);
+
+        using var created = JsonDocument.Parse(await create.Content.ReadAsStringAsync());
+        created.RootElement.GetProperty("sessionType").GetString().Should().Be("Teaching");
+    }
+
+    [Fact]
+    public async Task StartSession_with_unknown_type_returns_400()
+    {
+        var client = CreateBureauClient();
+        var body = new { antennaId = ApiTestFixture.SeededAntennaId, meetingDate = "2026-11-05T09:00:00Z", qrStepSeconds = 30, sessionType = "Party" };
+
+        var response = await client.PostAsJsonAsync("/api/v1/attendance-sessions", body);
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
     [Fact]
     public async Task GetQr_returns_rotating_token()
     {

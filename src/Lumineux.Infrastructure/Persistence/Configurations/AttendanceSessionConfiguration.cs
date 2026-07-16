@@ -1,4 +1,5 @@
 using Lumineux.Domain.Entities;
+using Lumineux.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -16,6 +17,7 @@ public sealed class AttendanceSessionConfiguration : IEntityTypeConfiguration<At
         builder.Property(x => x.StartTime).HasColumnName("start_time").IsRequired();
         builder.Property(x => x.EndTime).HasColumnName("end_time");
         builder.Property(x => x.Status).HasColumnName("status").HasConversion<string>().HasMaxLength(20).IsRequired();
+        builder.Property(x => x.SessionType).HasColumnName("session_type").HasConversion<string>().HasMaxLength(20).IsRequired().HasDefaultValue(SessionType.AntennaMeeting);
         builder.Property(x => x.OpenedByMemberId).HasColumnName("opened_by").IsRequired();
         builder.Property(x => x.ClosedByMemberId).HasColumnName("closed_by");
         builder.Property(x => x.CancelledByMemberId).HasColumnName("cancelled_by");

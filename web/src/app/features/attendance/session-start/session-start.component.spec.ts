@@ -13,7 +13,7 @@ describe('SessionStartComponent (US1/US2 + reprise 024)', () => {
 
   const openSession = {
     id: 77, antennaId: 1, meetingDate: '2026-07-05T00:00:00', startTime: '2026-07-05T09:30:00',
-    status: 'Open', openedByMemberId: 42, attendanceCount: 0,
+    status: 'Open', openedByMemberId: 42, attendanceCount: 0, sessionType: 'AntennaMeeting',
   };
 
   beforeEach(() => {
